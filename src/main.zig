@@ -8,11 +8,11 @@ pub fn main() !void {
     defer client.deinit();
 
     // Allocate a buffer for server headers
-    var buf: [4096]u8 = undefined;
+    var headers: [4096]u8 = undefined;
 
     // Start the HTTP request
     const uri = try std.Uri.parse("http://localhost:2375/images/json");
-    var req = try client.open(.GET, uri, .{ .server_header_buffer = &buf });
+    var req = try client.open(.GET, uri, .{ .server_header_buffer = &headers });
     defer req.deinit();
 
     // Send the HTTP request headers
@@ -24,6 +24,15 @@ pub fn main() !void {
     try req.wait();
 
     std.debug.print("status={d}\n", .{req.response.status});
+
+    // Create container for body of request
+    var body: [65536]u8 = undefined;
+    // Read the body of the request into waiting buffer
+    _ = try req.readAll(&body);
+    // Report the lenght of the body to print appropriate buffer sized chunk
+    const length = req.response.content_length orelse return error.NoBodyLength;
+    // Print the applicable section of the body
+    std.debug.print("{s}", .{body[0..length]});
 }
 
 const std = @import("std");
