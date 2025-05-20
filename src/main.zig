@@ -1,46 +1,29 @@
-//! By convention, main.zig is where your main function lives in the case that
-//! you are building an executable. If you are making a library, the convention
-//! is to delete this file and start with root.zig instead.
-
 pub fn main() !void {
-    // Prints to stderr (it's a shortcut based on `std.io.getStdErr()`)
-    std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
+    // Create a general purpose allocator
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
 
-    // stdout is for the actual output of your application, for example if you
-    // are implementing gzip, then only the compressed bytes should be sent to
-    // stdout, not any debugging messages.
-    const stdout_file = std.io.getStdOut().writer();
-    var bw = std.io.bufferedWriter(stdout_file);
-    const stdout = bw.writer();
+    // Create a HTTP client
+    var client = std.http.Client{ .allocator = gpa.allocator() };
+    defer client.deinit();
 
-    try stdout.print("Run `zig build test` to run the tests.\n", .{});
+    // Allocate a buffer for server headers
+    var buf: [4096]u8 = undefined;
 
-    try bw.flush(); // Don't forget to flush!
-}
+    // Start the HTTP request
+    const uri = try std.Uri.parse("http://localhost:2375/images/json");
+    var req = try client.open(.GET, uri, .{ .server_header_buffer = &buf });
+    defer req.deinit();
 
-test "simple test" {
-    var list = std.ArrayList(i32).init(std.testing.allocator);
-    defer list.deinit(); // Try commenting this out and see if zig detects the memory leak!
-    try list.append(42);
-    try std.testing.expectEqual(@as(i32, 42), list.pop());
-}
+    // Send the HTTP request headers
+    try req.send();
+    // Finish the body of a request
+    try req.finish();
 
-test "use other module" {
-    try std.testing.expectEqual(@as(i32, 150), lib.add(100, 50));
-}
+    // Waits for a response from the server and parses any headers that are sent
+    try req.wait();
 
-test "fuzz example" {
-    const Context = struct {
-        fn testOne(context: @This(), input: []const u8) anyerror!void {
-            _ = context;
-            // Try passing `--fuzz` to `zig build test` and see if it manages to fail this test case!
-            try std.testing.expect(!std.mem.eql(u8, "canyoufindme", input));
-        }
-    };
-    try std.testing.fuzz(Context{}, Context.testOne, .{});
+    std.debug.print("status={d}\n", .{req.response.status});
 }
 
 const std = @import("std");
-
-/// This imports the separate module containing `root.zig`. Take a look in `build.zig` for details.
-const lib = @import("scaffold_lib");
