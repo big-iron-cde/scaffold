@@ -29,7 +29,7 @@ pub fn main() !void {
     var body: [65536]u8 = undefined;
     // Read the body of the request into waiting buffer
     _ = try req.readAll(&body);
-    // Report the lenght of the body to print appropriate buffer sized chunk
+    // Report the length of the body to print appropriate buffer sized chunk
     const length = req.response.content_length orelse return error.NoBodyLength;
     // Print the applicable section of the body
     std.debug.print("{s}", .{body[0..length]});
