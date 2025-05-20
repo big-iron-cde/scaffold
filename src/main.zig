@@ -35,4 +35,9 @@ pub fn main() !void {
     std.debug.print("{s}", .{body[0..length]});
 }
 
+test "always win" {
+    try expect(true);
+}
+
 const std = @import("std");
+const expect = std.testing.expect;
