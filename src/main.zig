@@ -36,8 +36,8 @@ pub fn main() !void {
 }
 
 test "always win" {
-    try expect(true);
+    try std.testing.expect(true);
 }
 
 const std = @import("std");
-const expect = std.testing.expect;
+const lib = @import("zig_init_lib");
