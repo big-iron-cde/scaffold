@@ -3,6 +3,7 @@
 // provide stats on task runs, and be able to keep track of its tasks and their state.
 
 const std = @import("std");
+const uuid = @import("uuid");
 const task = @import("task/task.zig");
 const runTime = @import("runtime/runtime.zig");
 
@@ -12,4 +13,21 @@ pub const Worker = struct {
     id: []const u8,
     queue: std.AutoArrayHashMap(uuid.UUID, *task.Task),
     tasks: std.fifo.LinearFifo(*task.Task),
+
+    // initialize the worker with an allocator and an id
+    pub fn init(allocator: std.mem.Allocator) !Worker {
+        return Worker{
+            .allocator = allocator,
+            .id = try std.fmt.allocPrint(allocator, "worker-{d}", .{std.crypto.random.int(u32)}),
+            // initialize the queue with a hash map
+            .queue = std.fifo.LinearFifo(*task.Task, .Dynamic).init(allocator),
+            // initialize an empty task storage
+            .tasks = std.AutoArrayHashMap(uuid.UUID, *task.Task).init(allocator),
+        };
+    }
+
+    // task queue management
+    pub fn enqueueTask(self: *Worker, t: *task.Task) !void {
+        // TODO: should be able write the task to the end of the queue (?)
+    }
 };
