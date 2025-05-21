@@ -30,4 +30,17 @@ pub const Worker = struct {
     pub fn enqueueTask(self: *Worker, t: *task.Task) !void {
         // TODO: should be able write the task to the end of the queue (?)
     }
+
+    // processing tasks
+    pub fn startTask(self: *Worker, t: *task.Task) !void {
+        // TODO: should be able to start a task
+    }
+
+    pub fn stopTask(self: *Worker, t: *task.Task) !void {
+        // TODO: should be able to stop a task
+    }
+
+    pub fn runTask(self: *Worker, t: *task.Task) !void {
+        // TODO: should be able to run a task
+    }
 };
