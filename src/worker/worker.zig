@@ -29,6 +29,10 @@ pub const Worker = struct {
     // task queue management
     pub fn enqueueTask(self: *Worker, t: *task.Task) !void {
         // TODO: should be able write the task to the end of the queue (?)
+        // add to FIFO queue
+        try self.queue.writeItem(t);
+        // then, store the task in the task map!
+        try self.tasks.put(t.id, t);
     }
 
     // processing tasks
