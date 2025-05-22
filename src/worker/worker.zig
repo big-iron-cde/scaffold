@@ -38,13 +38,36 @@ pub const Worker = struct {
     // processing tasks
     pub fn startTask(self: *Worker, t: *task.Task) !void {
         // TODO: should be able to start a task
-    }
+        // check if the task is invalid
+        if (t.state != .pending and t.state != .scheduled) {
+            // return an erros
+            return error.InvalidTaskState;
+        }
 
-    pub fn stopTask(self: *Worker, t: *task.Task) !void {
-        // TODO: should be able to stop a task
+        // transition the task to running
+        try t.transition(.running);
+
+        // add the task to the task map
+        try self.tasks.put(t.id, t);
+
+        // debug print of the task name and ID
+        std.debug.print("Starting task {s} (ID: {s})\n", .{ t.name, t.id });
+
+        // TODO: docker implementation
     }
 
     pub fn runTask(self: *Worker, t: *task.Task) !void {
         // TODO: should be able to run a task
+        // be able to get the next task from the queue
+        if (self.queue.readItem()) |t| {
+            // state machine
+            try t.transition(.running);
+            // debug print of the task name and ID
+            std.debug.print("Running task {s} (ID: {s})\n", .{ t.name, t.id });
+        }
+    }
+
+    pub fn stopTask(self: *Worker, t: *task.Task) !void {
+        // TODO: should be able to stop a task
     }
 };
