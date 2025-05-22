@@ -5,7 +5,15 @@
 const std = @import("std");
 const uuid = @import("uuid");
 const task = @import("task/task.zig");
-const runTime = @import("runtime/runtime.zig"); // this should be replaced w/ the docker prof is working w/
+const runTime = @import("runtime/runtime.zig"); // this should be replaced w/ the docker prof is working on
+
+pub const WorkerError = error{
+    TaskNotFound,
+    InvalidState,
+    QueueFull,
+    QueueEmpty,
+    InvalidTaskState,
+};
 
 /// worker is a struct that represents a worker node in the system.
 pub const Worker = struct {
@@ -29,10 +37,16 @@ pub const Worker = struct {
     // task queue management
     pub fn enqueueTask(self: *Worker, t: *task.Task) !void {
         // TODO: should be able write the task to the end of the queue (?)
+        // check if task is in valid state for queuing
+        if (t.state != .pending and t.state != .scheduled) {
+            return WorkerError.InvalidTaskState;
+        }
         // add to FIFO queue
         try self.queue.writeItem(t);
         // then, store the task in the task map!
         try self.tasks.put(t.id, t);
+        // debug statement
+        std.debug.print("Enqueued task {s} (ID: {s})\n", .{ t.name, t.id });
     }
 
     // processing tasks
@@ -41,7 +55,7 @@ pub const Worker = struct {
         // check if the task is invalid
         if (t.state != .pending and t.state != .scheduled) {
             // return an erros
-            return error.InvalidTaskState;
+            return WorkerError.InvalidTaskState;
         }
 
         // transition the task to running
@@ -69,5 +83,7 @@ pub const Worker = struct {
 
     pub fn stopTask(self: *Worker, t: *task.Task) !void {
         // TODO: should be able to stop a task
+        const t = self.tasks.get(task_id) orelse return WorkerError.TaskNotFound;
+        if (t.state != .running) return WorkerError.InvalidState;
     }
 };
