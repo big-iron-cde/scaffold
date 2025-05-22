@@ -80,7 +80,15 @@ pub const Worker = struct {
 
     pub fn stopTask(self: *Worker, t: *task.Task) !void {
         // TODO: should be able to stop a task
-        const t = self.tasks.get(task_id) orelse return WorkerError.TaskNotFound;
-        if (t.state != .running) return WorkerError.InvalidState;
+        // first check if the task exists in our task list
+        _ = self.tasks.get(t.id) orelse return WorkerError.TaskNotFound;
+        // check if it is in running state
+        if (t.state != .running) {
+            return WorkerError.InvalidTaskState;
+        }
+        // transition the task to stopped
+        try t.transition(.stopped);
+        // debug print
+        std.debug.print("Stopping task {s} (ID: {s})\n", .{ t.name, t.id });
     }
 };
