@@ -72,13 +72,10 @@ pub const Worker = struct {
 
     pub fn runTask(self: *Worker, t: *task.Task) !void {
         // TODO: should be able to run a task
-        // be able to get the next task from the queue
-        if (self.queue.readItem()) |t| {
-            // state machine
-            try t.transition(.running);
-            // debug print of the task name and ID
-            std.debug.print("Running task {s} (ID: {s})\n", .{ t.name, t.id });
-        }
+        // state machine
+        try t.transition(.running);
+        // debug print of the task name and ID
+        std.debug.print("Running task {s} (ID: {s})\n", .{ t.name, t.id });
     }
 
     pub fn stopTask(self: *Worker, t: *task.Task) !void {
