@@ -11,8 +11,8 @@ const runTime = @import("runtime/runtime.zig");
 pub const Worker = struct {
     allocator: std.mem.Allocator,
     id: []const u8,
-    queue: std.AutoArrayHashMap(uuid.UUID, *task.Task),
-    tasks: std.fifo.LinearFifo(*task.Task),
+    queue: std.fifo.LinearFifo(*task.Task, .Dynamic),
+    tasks: std.AutoArrayHashMap(uuid.UUID, *task.Task),
 
     // initialize the worker with an allocator and an id
     pub fn init(allocator: std.mem.Allocator) !Worker {
