@@ -20,9 +20,7 @@ const Task = struct {
     // initialize a new task with the given name
     pub fn init(allocator: std.mem.Allocator, name: []const u8) !*Task {
         const id = try uuid.v4.new(allocator);
-        const task = allocator.create(Task) catch |err| {
-            std.log.err("Failed to allocate task: {s}", .{err});
-            return err;
+        const task = try allocator.create(Task);
         };
 
         task.* = Task{
@@ -93,7 +91,7 @@ const Task = struct {
     }
 
     // set the docj=ker image for this container
-    pub fn setImage(self: *Task, command: []const []const u8) !void {
+    pub fn setImage(self: *Task, image: []const u8) !void {
         if (self.image) |image| {
             self.allocator.free(image);
         }
@@ -148,8 +146,6 @@ const Task = struct {
         try self.transition(if (exit_code == 0) .Completed else .Failed);
     }
 };
-
-
 
 const std = @import("std");
 const uuid = @import("uuid");
