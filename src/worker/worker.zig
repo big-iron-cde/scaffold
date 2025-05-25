@@ -58,8 +58,8 @@ pub const Worker = struct {
     pub fn processTasks(self: *Worker) !void {
         while (self.queue.readItem()) |t| {
             switch (t.state) {
-                .Scheduled => try self.startTask(t),
-                .Completed => try self.stopTask(t),
+                .scheduled => try self.startTask(t),
+                .completed => try self.stopTask(t),
                 else => return WorkerError.InvalidTaskState,
             }
         }
@@ -70,7 +70,7 @@ pub const Worker = struct {
         // TODO: should be able to start a task
         // check if the task is invalid
         if (t.state != .pending and t.state != .scheduled) {
-            // return an erros
+            // return an error
             return WorkerError.InvalidTaskState;
         }
 
@@ -104,6 +104,8 @@ pub const Worker = struct {
         }
         // transition the task to stopped
         try t.transition(.stopped);
+        // remove the task from the task map
+        try self.tasks.remove(t.id);
         // debug print
         std.debug.print("Stopping task {s} (ID: {s})\n", .{ t.name, t.id });
     }
