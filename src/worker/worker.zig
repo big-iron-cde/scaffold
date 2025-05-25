@@ -20,8 +20,8 @@ pub const WorkerError = error{
 pub const Worker = struct {
     allocator: std.mem.Allocator,
     id: []const u8,
-    queue: std.fifo.LinearFifo(*task.Task, .Dynamic),
-    tasks: std.AutoArrayHashMap(uuid.UUID, *task.Task),
+    queue: std.fifo.LinearFifo(*Task, .Dynamic),
+    tasks: std.AutoArrayHashMap([]const u8, *Task),
 
     // initialize the worker with an allocator and an id
     pub fn init(allocator: std.mem.Allocator) !Worker {
@@ -47,36 +47,39 @@ pub const Worker = struct {
     }
 
     // task queue management
-    pub fn enqueueTask(self: *Worker, t: *task.Task) !void {
+    pub fn enqueueTask(self: *Worker, t: *Task) !void {
         // TODO: should be able write the task to the end of the queue (?)
         // check if task is in valid state for queuing
-        if (t.state != .pending and t.state != .scheduled) {
+        if (t.state != .Pending and t.state != .Scheduled) {
             return WorkerError.InvalidTaskState;
         }
         // add to FIFO queue
         try self.queue.writeItem(t);
         // then, store the task in the task map!
-        try self.tasks.put(t.id, t);
+        try self.tasks.put(t.ID, t);
         // debug statement
-        std.debug.print("Enqueued task {s} (ID: {s})\n", .{ t.name, t.id });
+        std.debug.print("Enqueued task {s} (ID: {s})\n", .{ t.name, t.ID });
     }
 
     // process the tasks in the queue
     pub fn processTasks(self: *Worker) !void {
         while (self.queue.readItem()) |t| {
             switch (t.state) {
-                .scheduled => try self.startTask(t),
-                .completed => try self.stopTask(t),
+                .Scheduled => try self.startTask(t),
+                .Completed => {
+                    // remove the completed tasks from tracking
+                    _ = self.tasks.remove(t.ID);
+                },
                 else => return WorkerError.InvalidTaskState,
             }
         }
     }
 
     // start a task as a docker container
-    pub fn startTask(self: *Worker, t: *task.Task) !void {
+    pub fn startTask(self: *Worker, t: *Task) !void {
         // TODO: should be able to start a task
         // check if the task is invalid
-        if (t.state != .pending and t.state != .scheduled) {
+        if (t.state != .Pending and t.state != .Scheduled) {
             // return an error
             return WorkerError.InvalidTaskState;
         }
@@ -85,10 +88,10 @@ pub const Worker = struct {
         try t.transition(.running);
 
         // add the task to the task map
-        try self.tasks.put(t.id, t);
+        try self.tasks.put(t.ID, t);
 
         // debug print of the task name and ID
-        std.debug.print("Starting task {s} (ID: {s})\n", .{ t.name, t.id });
+        std.debug.print("Starting task {s} (ID: {s})\n", .{ t.name, t.ID });
 
         // TODO: docker implementation
         // docker container creation and start
@@ -97,7 +100,7 @@ pub const Worker = struct {
     }
 
     // create a docker container for the task
-    fn createContainer(self: *Worker, t: *task.Task) !void {
+    fn createContainer(self: *Worker, t: *Task) !void {
         var gpa = std.heap.GeneralPurposeAllocator(.{}){};
         defer _ = gpa.deinit();
         const alloc = gpa.allocator();
@@ -110,7 +113,7 @@ pub const Worker = struct {
             .Cmd = t.command orelse &[_][]const u8{},
             .Env = t.env orelse &[_][]const u8{},
             .Labels = .{
-                ."task_id" = t.id,
+                ."task_id" = t.ID,
                 ."task_name" = t.name,
             },
             .HostConfig = docker.HostConfig{
@@ -118,7 +121,7 @@ pub const Worker = struct {
             },
         };
 
-        const container_name = try std.fmt.allocPrint(alloc, "task_{s}", .{t.id[0..8]});
+        const container_name = try std.fmt.allocPrint(alloc, "task_{s}", .{t.ID[0..8]});
         defer alloc.free(container_name);
 
         const create_response = try docker.@"/containers/create".post(alloc, .{
@@ -137,7 +140,7 @@ pub const Worker = struct {
         }
     }
 
-    fn startContainer(self: *Worker, t: *task.Task) !void {
+    fn startContainer(self: *Worker, t: *Task) !void {
         var gpa = std.heap.GeneralPurposeAllocator(.{}){};
         defer _ = gpa.deinit();
         const alloc = gpa.allocator();
@@ -184,12 +187,12 @@ pub const Worker = struct {
         }
     }
 
-    pub fn runTask(self: *Worker, t: *task.Task) !void {
+    pub fn runTask(self: *Worker, t: *Task) !void {
         // TODO: should be able to run a task
         // state machine
         try t.transition(.running);
         // debug print of the task name and ID
-        std.debug.print("Running task {s} (ID: {s})\n", .{ t.name, t.id });
+        std.debug.print("Running task {s} (ID: {s})\n", .{ t.name, t.ID });
         
         // if it's a container task, start it
         if (t.image) |_| {
@@ -197,10 +200,10 @@ pub const Worker = struct {
         }
     }
 
-    pub fn stopTask(self: *Worker, t: *task.Task) !void {
+    pub fn stopTask(self: *Worker, t: *Task) !void {
         // TODO: should be able to stop a task
         // first check if the task exists in our task list
-        _ = self.tasks.get(t.id) orelse return WorkerError.TaskNotFound;
+        _ = self.tasks.get(t.ID) orelse return WorkerError.TaskNotFound;
         // check if it is in running state
         if (t.state != .running) {
             return WorkerError.InvalidTaskState;
@@ -214,8 +217,8 @@ pub const Worker = struct {
         }
         
         // remove the task from the task map
-        _ = self.tasks.remove(t.id);
+        _ = self.tasks.remove(t.ID);
         // debug print
-        std.debug.print("Stopping task {s} (ID: {s})\n", .{ t.name, t.id });
+        std.debug.print("Stopping task {s} (ID: {s})\n", .{ t.name, t.ID });
     }
 };
