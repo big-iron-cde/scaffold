@@ -28,6 +28,11 @@ pub const Scheduler = struct {
         };
         return Scheduler{ .ptr = ctx };
     }
+
+    // TODO: might need a denit method to clean up the context (?) (to get rid of memory leaks)
+    pub fn deinit(self: *Scheduler) void {
+        self.ptr.allocator.destroy(self.ptr);
+    }
 };
 
 // step 1: select candidate nodes (for round-robin, we just return all workers)
@@ -41,13 +46,13 @@ pub fn score(self: *Scheduler, allocator: std.mem.Allocator, candidates: []*work
     errdefer scores.deinit();
 
     for (candidates) |w| {
-        const score: f32 = if (self.ptr.current_index < candidates.len and
+        const candidate_score: f32 = if (self.ptr.current_index < candidates.len and
             std.mem.eql(u8, w.id, candidates[self.ptr.current_index].id))
             0.1
         else
             1.0;
 
-        try scores.put(w.id, score);
+        try scores.put(w.id, candidate_score);
     }
 
     return scores;
