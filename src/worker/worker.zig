@@ -5,7 +5,7 @@
 const std = @import("std");
 const uuid = @import("uuid");
 const task = @import("task/task.zig");
-const runTime = @import("runtime/runtime.zig"); // this should be replaced w/ the docker prof is working on
+const docker = @import("docker");
 
 pub const WorkerError = error{
     TaskNotFound,
@@ -21,9 +21,13 @@ pub const Worker = struct {
     id: []const u8,
     queue: std.fifo.LinearFifo(*task.Task, .Dynamic),
     tasks: std.AutoArrayHashMap(uuid.UUID, *task.Task),
+    docker_client: *docker.Client,
 
     // initialize the worker with an allocator and an id
     pub fn init(allocator: std.mem.Allocator) !Worker {
+        var client = try docker.Client.init(allocator);
+        errdefer client.deinit();
+
         return Worker{
             .allocator = allocator,
             .id = try std.fmt.allocPrint(allocator, "worker-{d}", .{std.crypto.random.int(u32)}),
@@ -31,6 +35,7 @@ pub const Worker = struct {
             .queue = std.fifo.LinearFifo(*task.Task, .Dynamic).init(allocator),
             // initialize an empty task storage
             .tasks = std.AutoArrayHashMap(uuid.UUID, *task.Task).init(allocator),
+            .docker_client = client,
         };
     }
 
@@ -49,7 +54,18 @@ pub const Worker = struct {
         std.debug.print("Enqueued task {s} (ID: {s})\n", .{ t.name, t.id });
     }
 
-    // processing tasks
+    // process the tasks in the queue
+    pub fn processTasks(self: *Worker) !void {
+        while (self.queue.readItem()) |t| {
+            switch (t.state) {
+                .Scheduled => try self.startTask(t),
+                .Completed => try self.stopTask(t),
+                else => return WorkerError.InvalidTaskState,
+            }
+        }
+    }
+
+    // start a task as a docker container
     pub fn startTask(self: *Worker, t: *task.Task) !void {
         // TODO: should be able to start a task
         // check if the task is invalid
