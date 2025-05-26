@@ -4,7 +4,7 @@
 
 const std = @import("std");
 const uuid = @import("uuid");
-const task = @import("task/task.zig");
+const task = @import("../task/task.zig");
 const docker = @import("docker");
 
 pub const WorkerError = error{
@@ -113,8 +113,8 @@ pub const Worker = struct {
             .Cmd = t.command orelse &[_][]const u8{},
             .Env = t.env orelse &[_][]const u8{},
             .Labels = .{
-                ."task_id" = t.ID,
-                ."task_name" = t.name,
+                .task_id = t.ID,
+                .task_name = t.name,
             },
             .HostConfig = docker.HostConfig{
                 .AutoRemove = true,
@@ -193,7 +193,7 @@ pub const Worker = struct {
         try t.transition(.running);
         // debug print of the task name and ID
         std.debug.print("Running task {s} (ID: {s})\n", .{ t.name, t.ID });
-        
+
         // if it's a container task, start it
         if (t.image) |_| {
             try self.startTask(t);
@@ -210,12 +210,12 @@ pub const Worker = struct {
         }
         // transition the task to stopped
         try t.transition(.stopped);
-        
+
         // stop the container if it exists
         if (t.container_id) |container_id| {
             try self.stopContainer(container_id);
         }
-        
+
         // remove the task from the task map
         _ = self.tasks.remove(t.ID);
         // debug print

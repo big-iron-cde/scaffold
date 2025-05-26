@@ -1,27 +1,27 @@
 const State = enum(u8) { Pending, Scheduled, Completed, Running, Failed, Stopped };
 
-const Task = struct {
-    ID: uuid.v4.new(),
+pub const Task = struct {
+    ID: []const u8,
     name: []const u8,
     state: State,
     allocator: std.mem.Allocator,
 
     // docker specific config
     // docker image to use
-    image: []const u8 = null,
+    image: ?[]const u8 = null,
     // the docker container ID
-    container_id: []const u8 = null,
+    container_id: ?[]const u8 = null,
     // env variables
     env: ?[][]const u8 = null,
     // the exit code of the task
     exit_code: i32 = 0,
-    error: ?[]const u8 = null,
+    error_message: ?[]const u8 = null,
+    command: ?[][]const u8 = null,
 
     // initialize a new task with the given name
     pub fn init(allocator: std.mem.Allocator, name: []const u8) !*Task {
         const id = try uuid.v4.new(allocator);
         const task = try allocator.create(Task);
-        };
 
         task.* = Task{
             .allocator = allocator,
@@ -31,8 +31,9 @@ const Task = struct {
             .image = null,
             .container_id = null,
             .env = null,
-            .exit_code = null,
-            .error = null,
+            .exit_code = 0,
+            .error_message = null,
+            .command = null,
         };
 
         return task;
@@ -50,7 +51,7 @@ const Task = struct {
             self.allocator.free(container_id);
         }
 
-        if (self.command)|cmd| {
+        if (self.command) |cmd| {
             for (cmd) |arg| {
                 self.allocator.free(arg);
             }
@@ -68,7 +69,7 @@ const Task = struct {
     }
 
     // transition function to transition the task to a new state
-    pub fn transition(sef: *Task, new_state: State) !void {
+    pub fn transition(self: *Task, new_state: State) !void {
         // validate the state transition
         switch (self.state) {
             .Pending => {
@@ -86,14 +87,15 @@ const Task = struct {
                     return error.InvalidStateTransition;
                 }
             },
+            else => {},
         }
         self.state = new_state;
     }
 
-    // set the docj=ker image for this container
+    // set the docker image for this container
     pub fn setImage(self: *Task, image: []const u8) !void {
-        if (self.image) |image| {
-            self.allocator.free(image);
+        if (self.image) |old_image| {
+            self.allocator.free(old_image);
         }
         self.image = try self.allocator.dupe(u8, image);
     }
@@ -130,19 +132,12 @@ const Task = struct {
     pub fn recordCompletion(self: *Task, exit_code: i32, error_msg: ?[]const u8) !void {
         self.exit_code = exit_code;
         if (error_msg) |msg| {
-            if (self.error) |existing| {
+            if (self.error_message) |existing| {
                 self.allocator.free(existing);
             }
-            self.error = try self.allocator.dupe(u8, msg);
+            self.error_message = try self.allocator.dupe(u8, msg);
         }
-        
-        if (error_msg) |msg| {
-            if (self.error) |existing| {
-                self.allocator.free(existing);
-            }
-            self.error = try self.allocator.dupe(u8, msg);
-        }
-        
+
         try self.transition(if (exit_code == 0) .Completed else .Failed);
     }
 };
