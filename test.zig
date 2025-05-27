@@ -1,6 +1,8 @@
 const std = @import("std");
 const worker = @import("src/worker/worker.zig");
 const task = @import("src/task/task.zig");
+const uuid = @import("uuid");
+const docker = @import("docker");
 
 test "create worker" {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -11,7 +13,7 @@ test "create worker" {
 
     std.log.info("Worker ID: {s}", .{w.id});
     std.log.info("Tasks count: {d}", .{w.tasks.count()});
-    std.log.info("Queue count: {d}", .{w.queue.count()});
+    std.log.info("Queue count: {d}", .{w.queue.count});
 }
 
 test "enqueue task" {
