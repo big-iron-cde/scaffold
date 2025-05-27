@@ -31,7 +31,7 @@ pub const Worker = struct {
             // initialize the queue with a hash map
             .queue = std.fifo.LinearFifo(*task.Task, .Dynamic).init(allocator),
             // initialize an empty task storage
-            .tasks = std.AutoArrayHashMap(uuid.UUID, *task.Task).init(allocator),
+            .tasks = std.AutoArrayHashMap([]const u8, *task.Task).init(allocator),
         };
     }
 
@@ -140,7 +140,7 @@ pub const Worker = struct {
         }
     }
 
-    fn startContainer(self: *Worker, t: *task.Task) !void {
+    fn startContainer(_: *Worker, t: *task.Task) !void {
         var gpa = std.heap.GeneralPurposeAllocator(.{}){};
         defer _ = gpa.deinit();
         const alloc = gpa.allocator();
@@ -166,7 +166,7 @@ pub const Worker = struct {
         }
     }
 
-    fn stopContainer(self: *Worker, container_id: []const u8) !void {
+    fn stopContainer(_: *Worker, container_id: []const u8) !void {
         var gpa = std.heap.GeneralPurposeAllocator(.{}){};
         defer _ = gpa.deinit();
         const alloc = gpa.allocator();
