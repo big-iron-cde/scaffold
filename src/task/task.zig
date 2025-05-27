@@ -62,7 +62,7 @@ pub const Task = struct {
             for (env_vars) |env| {
                 self.allocator.free(env);
             }
-            self.allocator.free(env);
+            self.allocator.free(env_vars);
         }
 
         self.allocator.destroy(self);

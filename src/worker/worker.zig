@@ -20,8 +20,8 @@ pub const WorkerError = error{
 pub const Worker = struct {
     allocator: std.mem.Allocator,
     id: []const u8,
-    queue: std.fifo.LinearFifo(*Task, .Dynamic),
-    tasks: std.AutoArrayHashMap([]const u8, *Task),
+    queue: std.fifo.LinearFifo(*task.Task, .Dynamic),
+    tasks: std.AutoArrayHashMap([]const u8, *task.Task),
 
     // initialize the worker with an allocator and an id
     pub fn init(allocator: std.mem.Allocator) !Worker {
@@ -47,7 +47,7 @@ pub const Worker = struct {
     }
 
     // task queue management
-    pub fn enqueueTask(self: *Worker, t: *Task) !void {
+    pub fn enqueueTask(self: *Worker, t: *task.Task) !void {
         // TODO: should be able write the task to the end of the queue (?)
         // check if task is in valid state for queuing
         if (t.state != .Pending and t.state != .Scheduled) {
@@ -76,7 +76,7 @@ pub const Worker = struct {
     }
 
     // start a task as a docker container
-    pub fn startTask(self: *Worker, t: *Task) !void {
+    pub fn startTask(self: *Worker, t: *task.Task) !void {
         // TODO: should be able to start a task
         // check if the task is invalid
         if (t.state != .Pending and t.state != .Scheduled) {
@@ -100,7 +100,7 @@ pub const Worker = struct {
     }
 
     // create a docker container for the task
-    fn createContainer(self: *Worker, t: *Task) !void {
+    fn createContainer(self: *Worker, t: *task.Task) !void {
         var gpa = std.heap.GeneralPurposeAllocator(.{}){};
         defer _ = gpa.deinit();
         const alloc = gpa.allocator();
@@ -140,7 +140,7 @@ pub const Worker = struct {
         }
     }
 
-    fn startContainer(self: *Worker, t: *Task) !void {
+    fn startContainer(self: *Worker, t: *task.Task) !void {
         var gpa = std.heap.GeneralPurposeAllocator(.{}){};
         defer _ = gpa.deinit();
         const alloc = gpa.allocator();
@@ -187,7 +187,7 @@ pub const Worker = struct {
         }
     }
 
-    pub fn runTask(self: *Worker, t: *Task) !void {
+    pub fn runTask(self: *Worker, t: *task.Task) !void {
         // TODO: should be able to run a task
         // state machine
         try t.transition(.running);
@@ -200,7 +200,7 @@ pub const Worker = struct {
         }
     }
 
-    pub fn stopTask(self: *Worker, t: *Task) !void {
+    pub fn stopTask(self: *Worker, t: *task.Task) !void {
         // TODO: should be able to stop a task
         // first check if the task exists in our task list
         _ = self.tasks.get(t.ID) orelse return WorkerError.TaskNotFound;

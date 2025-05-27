@@ -12,22 +12,6 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    // export the worker module so it can be imported in test.zig
-    _ = b.createModule(.{
-        .name = "worker",
-        .root_source_file = b.path("src/worker/worker.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-
-    // export the task module so it can be imported in test.zig
-    _ = b.createModule(.{
-        .name = "task",
-        .root_source_file = b.path("src/task/task.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-
     // create the main executable
     const exe = b.addExecutable(.{
         .name = "scaffold",
