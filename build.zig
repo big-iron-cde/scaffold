@@ -5,20 +5,23 @@ pub fn build(b: *std.Build) void {
 
     const optimize = b.standardOptimizeOption(.{});
 
-    // create module for the main application
-    const exe_mod = b.createModule(.{
-        .root_source_file = b.path("src/main.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-
     // create the main executable
     const exe = b.addExecutable(.{
         .name = "scaffold",
-        .root_module = exe_mod,
+        .root_source_file = b.path("src/main.zig"),
+        .target = target,
+        .optimize = optimize
+    });
+
+    const uuid = b.dependency("uuid", .{
+        .target = target,
+        .optimize = optimize
     });
 
     b.installArtifact(exe);
+
+    exe.root_module.addImport("uuid", uuid.module("uuid"));
+    exe.linkLibrary(uuid.artifact("uuid"));
 
     // setup run command
     const run_cmd = b.addRunArtifact(exe);
@@ -38,6 +41,8 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+
+    unit_tests.root_module.addImport("uuid", uuid.module("uuid"));
 
     // install and run the tests
     b.installArtifact(unit_tests);
