@@ -6,17 +6,9 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     // create the main executable
-    const exe = b.addExecutable(.{
-        .name = "scaffold",
-        .root_source_file = b.path("src/main.zig"),
-        .target = target,
-        .optimize = optimize
-    });
+    const exe = b.addExecutable(.{ .name = "scaffold", .root_source_file = b.path("src/main.zig"), .target = target, .optimize = optimize });
 
-    const uuid = b.dependency("uuid", .{
-        .target = target,
-        .optimize = optimize
-    });
+    const uuid = b.dependency("uuid", .{ .target = target, .optimize = optimize });
 
     b.installArtifact(exe);
 
