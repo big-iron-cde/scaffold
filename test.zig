@@ -1,8 +1,6 @@
 const std = @import("std");
 const worker = @import("src/worker/worker.zig");
 const task = @import("src/task/task.zig");
-const uuid = @import("uuid");
-const docker = @import("docker");
 
 test "create worker" {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};

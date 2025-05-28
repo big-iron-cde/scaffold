@@ -39,6 +39,7 @@ pub fn build(b: *std.Build) void {
     });
 
     unit_tests.root_module.addImport("uuid", uuid.module("uuid"));
+    unit_tests.root_module.addImport("docker", docker.module("docker"));
 
     // install and run the tests
     b.installArtifact(unit_tests);
