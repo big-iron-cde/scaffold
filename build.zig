@@ -9,11 +9,15 @@ pub fn build(b: *std.Build) void {
     const exe = b.addExecutable(.{ .name = "scaffold", .root_source_file = b.path("src/main.zig"), .target = target, .optimize = optimize });
 
     const uuid = b.dependency("uuid", .{ .target = target, .optimize = optimize });
+    const docker = b.dependency("docker", .{ .target = target, .optimize = optimize });
 
     b.installArtifact(exe);
 
     exe.root_module.addImport("uuid", uuid.module("uuid"));
     exe.linkLibrary(uuid.artifact("uuid"));
+
+    exe.root_module.addImport("docker", docker.module("docker"));
+    exe.linkLibrary(docker.artifact("docker"));
 
     // setup run command
     const run_cmd = b.addRunArtifact(exe);
