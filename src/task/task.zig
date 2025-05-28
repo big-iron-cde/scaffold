@@ -1,4 +1,4 @@
-const State = enum(u8) { Pending, Scheduled, Completed, Running, Failed, Stopped };
+pub const State = enum(u8) { Pending, Scheduled, Completed, Running, Failed, Stopped };
 
 pub const Task = struct {
     ID: u128,
