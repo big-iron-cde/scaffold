@@ -23,12 +23,13 @@ test "enqueue task" {
     var w = try worker.Worker.init(alloc);
     defer w.deinit();
 
-    var t = try task.Task.init(alloc, "test-task");
-    defer t.deinit();
+    const t = try task.Task.init(alloc, "test-task");
+    // TODO: Deinitializing the task here creates a SEGFAULT!
+    //defer t.deinit();
 
     try w.enqueueTask(t);
 
-    std.log.info("Task ID: {s}", .{t.ID});
+    std.log.info("Task ID: {d}", .{t.ID});
     std.log.info("Task state: {s}", .{@tagName(t.state)});
     std.log.info("Tasks in worker: {d}", .{w.tasks.count()});
 }

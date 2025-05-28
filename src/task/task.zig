@@ -1,7 +1,7 @@
 const State = enum(u8) { Pending, Scheduled, Completed, Running, Failed, Stopped };
 
 pub const Task = struct {
-    ID: []const u8,
+    ID: u128,
     name: []const u8,
     state: State,
     allocator: std.mem.Allocator,
@@ -20,7 +20,7 @@ pub const Task = struct {
 
     // initialize a new task with the given name
     pub fn init(allocator: std.mem.Allocator, name: []const u8) !*Task {
-        const id = try uuid.v4.new(allocator);
+        const id = uuid.v4.new();
         const task = try allocator.create(Task);
 
         task.* = Task{
@@ -41,7 +41,8 @@ pub const Task = struct {
 
     // clean up all the task resources
     pub fn deinit(self: *Task) void {
-        self.allocator.free(self.ID);
+        // TODO: Determine why this call upsets the deallocation process
+        //defer self.allocator.free(self.ID);
         self.allocator.free(self.name);
 
         if (self.image) |image| {

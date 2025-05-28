@@ -21,7 +21,7 @@ pub const Worker = struct {
     allocator: std.mem.Allocator,
     id: []const u8,
     queue: std.fifo.LinearFifo(*task.Task, .Dynamic),
-    tasks: std.AutoArrayHashMap([]const u8, *task.Task),
+    tasks: std.AutoArrayHashMap(u128, *task.Task),
 
     // initialize the worker with an allocator and an id
     pub fn init(allocator: std.mem.Allocator) !Worker {
@@ -31,7 +31,7 @@ pub const Worker = struct {
             // initialize the queue with a hash map
             .queue = std.fifo.LinearFifo(*task.Task, .Dynamic).init(allocator),
             // initialize an empty task storage
-            .tasks = std.AutoArrayHashMap([]const u8, *task.Task).init(allocator),
+            .tasks = std.AutoArrayHashMap(u128, *task.Task).init(allocator),
         };
     }
 
@@ -58,7 +58,7 @@ pub const Worker = struct {
         // then, store the task in the task map!
         try self.tasks.put(t.ID, t);
         // debug statement
-        std.debug.print("Enqueued task {s} (ID: {s})\n", .{ t.name, t.ID });
+        std.debug.print("Enqueued task {s} (ID: {any})\n", .{ t.name, t.ID });
     }
 
     // process the tasks in the queue
@@ -91,7 +91,7 @@ pub const Worker = struct {
         try self.tasks.put(t.ID, t);
 
         // debug print of the task name and ID
-        std.debug.print("Starting task {s} (ID: {s})\n", .{ t.name, t.ID });
+        std.debug.print("Starting task {s} (ID: {any})\n", .{ t.name, t.ID });
 
         // TODO: docker implementation
         // docker container creation and start
@@ -121,7 +121,7 @@ pub const Worker = struct {
             },
         };
 
-        const container_name = try std.fmt.allocPrint(alloc, "task_{s}", .{t.ID[0..8]});
+        const container_name = try std.fmt.allocPrint(alloc, "task_{any}", .{t.ID[0..8]});
         defer alloc.free(container_name);
 
         const create_response = try docker.@"/containers/create".post(alloc, .{
@@ -134,7 +134,7 @@ pub const Worker = struct {
                 t.container_id = try self.allocator.dupe(u8, container.Id);
             },
             else => {
-                std.log.err("Failed to create container for task {s}: {any}", .{ t.name, create_response });
+                std.log.err("Failed to create container for task {s}: {s}", .{ t.name, create_response });
                 return WorkerError.DockerError;
             },
         }
@@ -156,7 +156,7 @@ pub const Worker = struct {
                 // container already started
                 .@"304" => {},
                 else => {
-                    std.log.err("Failed to start container for task {s}: {any}", .{ t.name, start_response });
+                    std.log.err("Failed to start container for task {s}: {s}", .{ t.name, start_response });
                     return WorkerError.DockerError;
                 },
             }
@@ -181,7 +181,7 @@ pub const Worker = struct {
             // container already stopped
             .@"304" => {},
             else => {
-                std.log.err("Failed to stop container {s}: {any}", .{ container_id, stop_response });
+                std.log.err("Failed to stop container {s}: {s}", .{ container_id, stop_response });
                 return WorkerError.DockerError;
             },
         }
@@ -192,7 +192,7 @@ pub const Worker = struct {
         // state machine
         try t.transition(.running);
         // debug print of the task name and ID
-        std.debug.print("Running task {s} (ID: {s})\n", .{ t.name, t.ID });
+        std.debug.print("Running task {s} (ID: {any})\n", .{ t.name, t.ID });
 
         // if it's a container task, start it
         if (t.image) |_| {
@@ -219,6 +219,6 @@ pub const Worker = struct {
         // remove the task from the task map
         _ = self.tasks.remove(t.ID);
         // debug print
-        std.debug.print("Stopping task {s} (ID: {s})\n", .{ t.name, t.ID });
+        std.debug.print("Stopping task {s} (ID: {any})\n", .{ t.name, t.ID });
     }
 };
