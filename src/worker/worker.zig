@@ -85,7 +85,7 @@ pub const Worker = struct {
         }
 
         // transition the task to running
-        try t.transition(.running);
+        try t.transition(.Running);
 
         // add the task to the task map
         try self.tasks.put(t.ID, t);
@@ -190,7 +190,7 @@ pub const Worker = struct {
     pub fn runTask(self: *Worker, t: *task.Task) !void {
         // TODO: should be able to run a task
         // state machine
-        try t.transition(.running);
+        try t.transition(.Running);
         // debug print of the task name and ID
         std.debug.print("Running task {s} (ID: {any})\n", .{ t.name, t.ID });
 
@@ -205,11 +205,11 @@ pub const Worker = struct {
         // first check if the task exists in our task list
         _ = self.tasks.get(t.ID) orelse return WorkerError.TaskNotFound;
         // check if it is in running state
-        if (t.state != .running) {
+        if (t.state != .Running) {
             return WorkerError.InvalidTaskState;
         }
         // transition the task to stopped
-        try t.transition(.stopped);
+        try t.transition(.Stopped);
 
         // stop the container if it exists
         if (t.container_id) |container_id| {
