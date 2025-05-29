@@ -288,3 +288,33 @@ test "scheduler integration tests" {
         std.log.warn("Third scheduling selected: {s}\n", .{selected.id});
     }
 }
+
+test "launch container" {
+    std.log.warn("\n===== TESTING CONTAINER LAUNCH =====\n", .{});
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const alloc = gpa.allocator();
+
+    var w = try worker.Worker.init(alloc);
+    defer w.deinit();
+
+    var t = try task.Task.init(alloc, "test-container");
+    defer t.deinit();
+
+    // set an simple img then we can change to theia
+    try t.setImage("alpine:latest");
+    try t.setCommand(&[_][]const u8{ "echo", "Hello from container!" });
+    try t.transition(.Scheduled);
+
+    try w.enqueueTask(t);
+    try w.startTask(t);
+
+    // check to see if container started
+    try std.testing.expect(t.container_id != null);
+    std.debug.print("Container ID: {s}\n", .{t.container_id.?});
+
+    // run briefly
+    std.time.sleep(1 * std.time.ns_per_s);
+
+    // clean up
+    try w.stopTask(t);
+}
