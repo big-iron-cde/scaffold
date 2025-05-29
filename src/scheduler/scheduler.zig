@@ -63,7 +63,7 @@ pub const Scheduler = struct {
 
     // step 3: select the best node (round-robin just returns the lowest score)
     pub fn pick(self: *Scheduler, scores: *std.StringHashMap(f32)) !*worker.Worker {
-        var best_score: f32 = std.math.f32_max;
+        var best_score: f32 = std.math.inf(f32);
         var best_worker: ?*worker.Worker = null;
 
         var it = scores.iterator();
