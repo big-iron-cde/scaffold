@@ -104,39 +104,63 @@ pub const Worker = struct {
         var gpa = std.heap.GeneralPurposeAllocator(.{}){};
         defer _ = gpa.deinit();
         const alloc = gpa.allocator();
-        
-        const labelInfo = struct {
-            task_id: u128,
-            task_name: []const u8
-        };
+
+        const labelInfo = struct { task_id: u128, task_name: []const u8 };
 
         const container_config = docker.ContainerConfig{
             // TODO: Align fields with ContainerConfig definition
             //       in zig-docker's direct.zig; for example: the
             //       spec doesn't contain HostConfig
+            .Hostname = "",
+            .Domainname = "",
+            .User = "",
+            .AttachStdin = false,
+            .AttachStdout = true,
+            .AttachStderr = true,
+            .ExposedPorts = .{},
+            .Tty = false,
+            .OpenStdin = false,
+            .StdinOnce = false,
+            .Env = t.env orelse &[_][]const u8{},
+            .Cmd = t.command orelse &[_][]const u8{},
+            .Healthcheck = null,
+            .ArgsEscaped = false,
             .Image = t.image orelse {
                 std.log.err("Task {s} has no image specified", .{t.name});
                 return WorkerError.DockerError;
             },
-            .Cmd = t.command orelse &[_][]const u8{},
-            .Env = t.env orelse &[_][]const u8{},
-            .Labels = labelInfo {
-                .task_id = t.ID,
-                .task_name = t.name,
-            },
-            .HostConfig = docker.HostConfig{
-                .AutoRemove = true,
-            },
+            .Volumes = .{},
+            .WorkingDir = "",
+            .Entrypoint = &[_][]const u8{},
+            .NetworkDisabled = false,
+            .MacAddress = "",
+            .OnBuild = &[_][]const u8{},
+            .Labels = .{},
+            .StopSignal = "",
+            .StopTimeout = 0,
+            .Shell = &[_][]const u8{},
         };
+
+        const host_config = docker.HostConfig{
+            .AutoRemove = true,
+        };
+
+        const networking_config = docker.NetworkingConfig{};
 
         const container_name = try std.fmt.allocPrint(alloc, "task_{any}", .{t.ID[0..8]});
         defer alloc.free(container_name);
 
+        // pass config objects
         const create_response = try docker.@"/containers/create".post(alloc, .{
             .name = container_name,
-            .body = container_config,
+            .body = .{
+                .ContainerConfig = container_config,
+                .HostConfig = host_config,
+                .NetworkingConfig = networking_config,
+            },
         });
 
+        // process the responses!
         switch (create_response) {
             .@"201" => |container| {
                 t.container_id = try self.allocator.dupe(u8, container.Id);
