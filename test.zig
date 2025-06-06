@@ -1,4 +1,6 @@
 const std = @import("std");
+const uuid = @import("uuid");
+const docker = @import("docker");
 const worker = @import("src/worker/worker.zig");
 const task = @import("src/task/task.zig");
 const scheduler = @import("src/scheduler/scheduler.zig");

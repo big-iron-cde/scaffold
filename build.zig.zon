@@ -41,8 +41,8 @@
             .hash = "uuid-0.3.0-oOieIYF1AAA_BtE7FvVqqTn5uEYTvvz7ycuVnalCOf8C",
         },
         .docker = .{
-            .url = "https://github.com/big-iron-cde/zig-docker/archive/refs/tags/0.2.4.tar.gz",
-            .hash = "docker-0.2.4-dbHWXNIzBgC_MiGszDvkFP8pL8w7SL_YsM3fHJqsQ4vQ",
+            .url = "https://github.com/big-iron-cde/zig-docker/archive/refs/tags/0.2.7.tar.gz",
+            .hash = "docker-0.2.4-dbHWXOo4BgC7ETTBOSs4t9XSKx6Rsm2b5knVwPpVgoIC",
         },
     },
     .paths = .{
