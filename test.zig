@@ -30,7 +30,7 @@ test "enqueue task" {
 
     try w.enqueueTask(t);
 
-    std.log.warn("Task enqueued: ID={d}, State={s}, Worker tasks={d}\n", .{ t.ID, @tagName(t.state), w.tasks.count() });
+    std.log.warn("Task enqueued: ID={s}, State={s}, Worker tasks={d}\n", .{ uuid.urn.serialize(t.ID), @tagName(t.state), w.tasks.count() });
 }
 
 test "dequeue task" {

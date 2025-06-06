@@ -91,7 +91,7 @@ pub const Worker = struct {
         try self.tasks.put(t.ID, t);
 
         // debug print of the task name and ID
-        std.debug.print("Starting task {s} (ID: {any})\n", .{ t.name, t.ID });
+        std.debug.print("Starting task {s} (ID: {any})\n", .{ t.name, uuid.urn.serialize(t.ID) });
 
         // TODO: docker implementation
         // docker container creation and start
@@ -147,12 +147,14 @@ pub const Worker = struct {
 
         _ = docker.NetworkingConfig{};
 
-        const container_name = try std.fmt.allocPrint(alloc, "task_{any}", .{t.ID});
-        defer alloc.free(container_name);
+        const container_name = uuid.urn.serialize(t.ID);
+
+        // Need a longer lifetime?
+        //defer alloc.free(container_name);
 
         // pass config objects
         const create_response = try docker.@"/containers/create".post(alloc, .{
-            .name = container_name,
+            .name = &container_name,
         }, .{ .body = container_config });
 
         // process the responses!
@@ -175,7 +177,7 @@ pub const Worker = struct {
         if (t.container_id) |container_id| {
             const start_response = try docker.@"/containers/{id}/start".post(alloc, .{
                 .id = container_id,
-            });
+            }, .{ .detachKeys = "" });
 
             switch (start_response) {
                 // success!
@@ -200,7 +202,7 @@ pub const Worker = struct {
 
         const stop_response = try docker.@"/containers/{id}/stop".post(alloc, .{
             .id = container_id,
-        });
+        }, .{ .signal = "", .t = 0 });
 
         switch (stop_response) {
             // success!
@@ -219,7 +221,7 @@ pub const Worker = struct {
         // state machine
         try t.transition(.Running);
         // debug print of the task name and ID
-        std.debug.print("Running task {s} (ID: {any})\n", .{ t.name, t.ID });
+        std.debug.print("Running task {s} (ID: {any})\n", .{ t.name, uuid.urn.serialize(t.ID) });
 
         // if it's a container task, start it
         if (t.image) |_| {
@@ -244,8 +246,8 @@ pub const Worker = struct {
         }
 
         // remove the task from the task map
-        _ = self.tasks.remove(t.ID);
+        _ = self.tasks.swapRemove(t.ID);
         // debug print
-        std.debug.print("Stopping task {s} (ID: {any})\n", .{ t.name, t.ID });
+        std.debug.print("Stopping task {s} (ID: {any})\n", .{ t.name, uuid.urn.serialize(t.ID) });
     }
 };
