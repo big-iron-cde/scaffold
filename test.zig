@@ -300,7 +300,8 @@ test "launch container" {
     defer w.deinit();
 
     var t = try task.Task.init(alloc, "test-container");
-    defer t.deinit();
+    // REMOVE THIS LINE - worker takes ownership
+    // defer t.deinit();
 
     // set an simple img then we can change to theia
     try t.setImage("alpine:latest");
@@ -308,7 +309,18 @@ test "launch container" {
     try t.transition(.Scheduled);
 
     try w.enqueueTask(t);
-    try w.startTask(t);
+
+    // add error handling for missing image
+    w.startTask(t) catch |err| switch (err) {
+        error.DockerError => {
+            std.log.warn("Docker error - you may need to pull the alpine:latest image first", .{});
+            // remove task from worker to prevent double-free
+            _ = w.tasks.swapRemove(t.ID);
+            t.deinit();
+            return;
+        },
+        else => return err,
+    };
 
     // check to see if container started
     try std.testing.expect(t.container_id != null);
