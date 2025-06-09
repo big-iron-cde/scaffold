@@ -97,13 +97,14 @@ pub const Worker = struct {
         // docker container creation and start
         try self.createContainer(t);
         try self.startContainer(t);
+        std.time.sleep(1 * std.time.ns_per_s); // for 1 second
     }
 
     // create a docker container for the task
     fn createContainer(self: *Worker, t: *task.Task) !void {
-        var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-        defer _ = gpa.deinit();
-        const alloc = gpa.allocator();
+        var arena = std.heap.ArenaAllocator.init(self.allocator);
+        defer arena.deinit(); // this will free all allocations at once
+        const alloc = arena.allocator();
 
         _ = struct { task_id: u128, task_name: []const u8 };
 
@@ -160,7 +161,7 @@ pub const Worker = struct {
         // process the responses!
         switch (create_response) {
             .@"201" => |container| {
-                t.container_id = try self.allocator.dupe(u8, container.Id orelse "");
+                t.container_id = try self.allocator.dupe(u8, container.Id);
             },
             else => {
                 std.log.err("Failed to create container for task {s}: {any}", .{ t.name, create_response });
@@ -169,10 +170,10 @@ pub const Worker = struct {
         }
     }
 
-    fn startContainer(_: *Worker, t: *task.Task) !void {
-        var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-        defer _ = gpa.deinit();
-        const alloc = gpa.allocator();
+    fn startContainer(self: *Worker, t: *task.Task) !void {
+        var arena = std.heap.ArenaAllocator.init(self.allocator);
+        defer arena.deinit();
+        const alloc = arena.allocator();
 
         if (t.container_id) |container_id| {
             const start_response = try docker.@"/containers/{id}/start".post(alloc, .{
@@ -195,10 +196,10 @@ pub const Worker = struct {
         }
     }
 
-    fn stopContainer(_: *Worker, container_id: []const u8) !void {
-        var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-        defer _ = gpa.deinit();
-        const alloc = gpa.allocator();
+    fn stopContainer(self: *Worker, container_id: []const u8) !void {
+        var arena = std.heap.ArenaAllocator.init(self.allocator);
+        defer arena.deinit();
+        const alloc = arena.allocator();
 
         const stop_response = try docker.@"/containers/{id}/stop".post(alloc, .{
             .id = container_id,
