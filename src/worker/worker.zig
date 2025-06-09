@@ -163,7 +163,7 @@ pub const Worker = struct {
                 t.container_id = try self.allocator.dupe(u8, container.Id orelse "");
             },
             else => {
-                std.log.err("Failed to create container for task {s}: {s}", .{ t.name, create_response });
+                std.log.err("Failed to create container for task {s}: {any}", .{ t.name, create_response });
                 return WorkerError.DockerError;
             },
         }
@@ -185,7 +185,7 @@ pub const Worker = struct {
                 // container already started
                 .@"304" => {},
                 else => {
-                    std.log.err("Failed to start container for task {s}: {s}", .{ t.name, start_response });
+                    std.log.err("Failed to start container for task {s}: {any}", .{ t.name, start_response });
                     return WorkerError.DockerError;
                 },
             }
@@ -210,7 +210,7 @@ pub const Worker = struct {
             // container already stopped
             .@"304" => {},
             else => {
-                std.log.err("Failed to stop container {s}: {s}", .{ container_id, stop_response });
+                std.log.err("Failed to stop container {s}: {any}", .{ container_id, stop_response });
                 return WorkerError.DockerError;
             },
         }
