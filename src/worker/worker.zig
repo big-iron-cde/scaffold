@@ -85,70 +85,100 @@ pub const Worker = struct {
         }
 
         // transition the task to running
-        try t.transition(.running);
+        try t.transition(.Running);
 
         // add the task to the task map
         try self.tasks.put(t.ID, t);
 
         // debug print of the task name and ID
-        std.debug.print("Starting task {s} (ID: {any})\n", .{ t.name, t.ID });
+        std.debug.print("Starting task {s} (ID: {any})\n", .{ t.name, uuid.urn.serialize(t.ID) });
 
         // TODO: docker implementation
         // docker container creation and start
         try self.createContainer(t);
         try self.startContainer(t);
+        std.time.sleep(1 * std.time.ns_per_s); // for 1 second
     }
 
     // create a docker container for the task
     fn createContainer(self: *Worker, t: *task.Task) !void {
-        var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-        defer _ = gpa.deinit();
-        const alloc = gpa.allocator();
+        var arena = std.heap.ArenaAllocator.init(self.allocator);
+        defer arena.deinit(); // this will free all allocations at once
+        const alloc = arena.allocator();
+
+        _ = struct { task_id: u128, task_name: []const u8 };
 
         const container_config = docker.ContainerConfig{
+            // TODO: Align fields with ContainerConfig definition
+            //       in zig-docker's direct.zig; for example: the
+            //       spec doesn't contain HostConfig
+            .Hostname = "",
+            .Domainname = "",
+            .User = "",
+            .AttachStdin = false,
+            .AttachStdout = true,
+            .AttachStderr = true,
+            .ExposedPorts = .{},
+            .Tty = false,
+            .OpenStdin = false,
+            .StdinOnce = false,
+            .Env = t.env orelse &[_][]const u8{},
+            .Cmd = t.command orelse &[_][]const u8{},
+            .Healthcheck = null,
+            .ArgsEscaped = false,
             .Image = t.image orelse {
                 std.log.err("Task {s} has no image specified", .{t.name});
                 return WorkerError.DockerError;
             },
-            .Cmd = t.command orelse &[_][]const u8{},
-            .Env = t.env orelse &[_][]const u8{},
-            .Labels = .{
-                .task_id = t.ID,
-                .task_name = t.name,
-            },
-            .HostConfig = docker.HostConfig{
-                .AutoRemove = true,
-            },
+            .Volumes = .{},
+            .WorkingDir = "",
+            .Entrypoint = &[_][]const u8{},
+            .NetworkDisabled = false,
+            .MacAddress = "",
+            .OnBuild = &[_][]const u8{},
+            .Labels = .{},
+            .StopSignal = "",
+            .StopTimeout = 0,
+            .Shell = &[_][]const u8{},
         };
 
-        const container_name = try std.fmt.allocPrint(alloc, "task_{any}", .{t.ID[0..8]});
-        defer alloc.free(container_name);
+        _ = docker.HostConfig{
+            .AutoRemove = true,
+        };
 
+        _ = docker.NetworkingConfig{};
+
+        const container_name = uuid.urn.serialize(t.ID);
+
+        // Need a longer lifetime?
+        //defer alloc.free(container_name);
+
+        // pass config objects
         const create_response = try docker.@"/containers/create".post(alloc, .{
-            .name = container_name,
-            .body = container_config,
-        });
+            .name = &container_name,
+        }, .{ .body = container_config });
 
+        // process the responses!
         switch (create_response) {
             .@"201" => |container| {
                 t.container_id = try self.allocator.dupe(u8, container.Id);
             },
             else => {
-                std.log.err("Failed to create container for task {s}: {s}", .{ t.name, create_response });
+                std.log.err("Failed to create container for task {s}: {any}", .{ t.name, create_response });
                 return WorkerError.DockerError;
             },
         }
     }
 
-    fn startContainer(_: *Worker, t: *task.Task) !void {
-        var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-        defer _ = gpa.deinit();
-        const alloc = gpa.allocator();
+    fn startContainer(self: *Worker, t: *task.Task) !void {
+        var arena = std.heap.ArenaAllocator.init(self.allocator);
+        defer arena.deinit();
+        const alloc = arena.allocator();
 
         if (t.container_id) |container_id| {
             const start_response = try docker.@"/containers/{id}/start".post(alloc, .{
                 .id = container_id,
-            });
+            }, .{ .detachKeys = "" });
 
             switch (start_response) {
                 // success!
@@ -156,7 +186,7 @@ pub const Worker = struct {
                 // container already started
                 .@"304" => {},
                 else => {
-                    std.log.err("Failed to start container for task {s}: {s}", .{ t.name, start_response });
+                    std.log.err("Failed to start container for task {s}: {any}", .{ t.name, start_response });
                     return WorkerError.DockerError;
                 },
             }
@@ -166,14 +196,14 @@ pub const Worker = struct {
         }
     }
 
-    fn stopContainer(_: *Worker, container_id: []const u8) !void {
-        var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-        defer _ = gpa.deinit();
-        const alloc = gpa.allocator();
+    fn stopContainer(self: *Worker, container_id: []const u8) !void {
+        var arena = std.heap.ArenaAllocator.init(self.allocator);
+        defer arena.deinit();
+        const alloc = arena.allocator();
 
         const stop_response = try docker.@"/containers/{id}/stop".post(alloc, .{
             .id = container_id,
-        });
+        }, .{ .signal = "", .t = 0 });
 
         switch (stop_response) {
             // success!
@@ -181,7 +211,7 @@ pub const Worker = struct {
             // container already stopped
             .@"304" => {},
             else => {
-                std.log.err("Failed to stop container {s}: {s}", .{ container_id, stop_response });
+                std.log.err("Failed to stop container {s}: {any}", .{ container_id, stop_response });
                 return WorkerError.DockerError;
             },
         }
@@ -190,9 +220,9 @@ pub const Worker = struct {
     pub fn runTask(self: *Worker, t: *task.Task) !void {
         // TODO: should be able to run a task
         // state machine
-        try t.transition(.running);
+        try t.transition(.Running);
         // debug print of the task name and ID
-        std.debug.print("Running task {s} (ID: {any})\n", .{ t.name, t.ID });
+        std.debug.print("Running task {s} (ID: {any})\n", .{ t.name, uuid.urn.serialize(t.ID) });
 
         // if it's a container task, start it
         if (t.image) |_| {
@@ -205,11 +235,11 @@ pub const Worker = struct {
         // first check if the task exists in our task list
         _ = self.tasks.get(t.ID) orelse return WorkerError.TaskNotFound;
         // check if it is in running state
-        if (t.state != .running) {
+        if (t.state != .Running) {
             return WorkerError.InvalidTaskState;
         }
         // transition the task to stopped
-        try t.transition(.stopped);
+        try t.transition(.Stopped);
 
         // stop the container if it exists
         if (t.container_id) |container_id| {
@@ -217,8 +247,8 @@ pub const Worker = struct {
         }
 
         // remove the task from the task map
-        _ = self.tasks.remove(t.ID);
+        _ = self.tasks.swapRemove(t.ID);
         // debug print
-        std.debug.print("Stopping task {s} (ID: {any})\n", .{ t.name, t.ID });
+        std.debug.print("Stopping task {s} (ID: {any})\n", .{ t.name, uuid.urn.serialize(t.ID) });
     }
 };
