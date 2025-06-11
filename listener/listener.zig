@@ -5,15 +5,21 @@ const std = @import("std");
 pub const Port = struct {
     number: u16,
 
+    pub const Error = error{
+        RestrictedPort,
+        PortUnavailable,
+        NoAvailablePort,
+    };
+
     // list of the RESTRICTED ports
-    const required_ports = [_]u16{ 22, 80, 443, 2375, 3306, 5432, 6379, 8080, 27017 };
+    const restricted_ports = [_]u16{ 22, 80, 443, 2375, 3306, 5432, 6379, 8080, 27017 };
 
     // min and max port range
     const min_port = 1025;
     const max_port = 65535;
 
     // initialize with a specific port number
-    pub fn init(port_number: u16) Port {
+    pub fn init(port_number: u16) Error!Port {
         if (isRestricted(port_number)) {
             return error.RestrictedPort;
         }
@@ -26,7 +32,7 @@ pub const Port = struct {
     }
 
     // find an available port in the range
-    pub fn findAvailable() !Port {
+    pub fn findAvailable() Error!Port {
         // initialize a random number generator & seed it
         // with the current time (so it behaves diff every run)
         var prng = std.rand.DefaultPrng.init(@intCast(std.time.milliTimestamp()));
@@ -54,10 +60,30 @@ pub const Port = struct {
     }
 
     // be able to check if the port is in the restricted list
-    fn isRestricted(port: u16) bool {}
+    fn isRestricted(port: u16) bool {
+        for (restricted_ports) |restricted| {
+            if (port == restricted) return true;
+        }
+        return false;
+    }
 
+    // test if a port is available by trying to bind to it
     fn isAvailable(port: u16) !bool {
-        // test if a port is available by trying to bind to it
+        // try to bind to the port to see if it is available
+        var server = std.net.StreamServer.init(.{});
+        defer server.deinit();
+
+        // going to local but might need to change when developing (?)
+        const address = try std.net.Address.parseIp("0.0.0.0", port);
+
+        const listener = server.listen(address) catch |err| {
+            if (err == error.AddressInUse) {
+                return false;
+            }
+            return err;
+        };
+        defer listener.deinit();
+        return true;
     }
 };
 
