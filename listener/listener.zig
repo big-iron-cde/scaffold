@@ -25,8 +25,20 @@ pub const Port = struct {
         return Port{ .number = port_number };
     }
 
+    // find an available port in the range
     pub fn findAvailable() !Port {
-        // TODO: find an available port in the range
+        // initialize a random number generator & seed it
+        // with the current time (so it behaves diff every run)
+        var prng = std.rand.DefaultPrng.init(@intCast(std.time.milliTimestamp()));
+        const random = prng.random();
+
+        // try to find an available port
+        var attempts: usize = 0;
+        const max_attempts = 1000;
+
+        while (attempts < max_attempts) : {attempts += 1} {
+            
+        }
     }
 
     fn isRestricted(port: u16) bool {
