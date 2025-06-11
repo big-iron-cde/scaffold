@@ -9,6 +9,7 @@ pub const Port = struct {
         RestrictedPort,
         PortUnavailable,
         NoAvailablePort,
+        AddressInUse,
     };
 
     // list of the RESTRICTED ports
@@ -21,11 +22,11 @@ pub const Port = struct {
     // initialize with a specific port number
     pub fn init(port_number: u16) Error!Port {
         if (isRestricted(port_number)) {
-            return error.RestrictedPort;
+            return Error.RestrictedPort;
         }
 
         if (!try isAvailable(port_number)) {
-            return error.PortUnavailable;
+            return Error.PortUnavailable;
         }
 
         return Port{ .number = port_number };
@@ -56,7 +57,7 @@ pub const Port = struct {
                 return Port{ .number = port_number };
             }
         }
-        return error.NoAvailablePort;
+        return Error.NoAvailablePort;
     }
 
     // be able to check if the port is in the restricted list
@@ -77,7 +78,7 @@ pub const Port = struct {
         const address = try std.net.Address.parseIp("0.0.0.0", port);
 
         const listener = server.listen(address) catch |err| {
-            if (err == error.AddressInUse) {
+            if (err == Error.AddressInUse) {
                 return false;
             }
             return err;
