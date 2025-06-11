@@ -36,14 +36,25 @@ pub const Port = struct {
         var attempts: usize = 0;
         const max_attempts = 1000;
 
-        while (attempts < max_attempts) : {attempts += 1} {
-            
+        while (attempts < max_attempts) : (attempts += 1) {
+            // generate a random port number in our range
+            const port_number = random.intRangeAtMost(u16, min_port, max_port);
+
+            // check if the port is restricted
+            if (isRestricted(port_number)) {
+                continue; // skip restricted ports
+            }
+
+            // check if the port is available
+            if (try isAvailable(port_number)) {
+                return Port{ .number = port_number };
+            }
         }
+        return error.NoAvailablePort;
     }
 
-    fn isRestricted(port: u16) bool {
-        // TODO: be able to check if the port is in the restricted list
-    }
+    // be able to check if the port is in the restricted list
+    fn isRestricted(port: u16) bool {}
 
     fn isAvailable(port: u16) !bool {
         // test if a port is available by trying to bind to it
