@@ -89,3 +89,82 @@ pub const Port = struct {
 };
 
 // LISTENER IMPLEMENTATION
+
+pub const Listener = struct {
+    server: std.net.StreamServer,
+    allocator: std.mem.Allocator,
+    port: Port,
+    is_running: bool,
+
+    // initialize a new listener with an available port
+    pub fn init(allocator: std.mem.Allocator) !Listener {
+        // find an available port
+        const port = try Port.findAvailable();
+
+        return Listener{
+            .server = std.net.StremServer.init(.{
+                .reuse_address = true,
+            }),
+            .allocator = allocator,
+            .port = port,
+            .is_running = false,
+        };
+    }
+
+    // start the listener and begin acceting connections
+    pub fn start(self: *Listener) !void {
+        // create the address to listen on
+        const address = try std.net.Address.parseIp("0.0.0.0", self.port.number);
+
+        // start listening on the port
+        try self.server.listen(address);
+        self.is_running = true;
+
+        std.log.info("Listener started on port {d}", .{self.port.number});
+
+        // accept connection until stopped
+        while (self.is_running) {
+            const connection = self.server.accept() catch |err| {
+                std.log.err("Error accepting connection: {s}", .{@errorName(err)});
+                continue;
+            };
+
+            // handle the connection
+            self.handleConnection(connection) catch |err| {
+                std.log.err("Error handling connection: {s}", .{@errorName(err)});
+            };
+        }
+    }
+
+    // handle a single connection
+    fn handleConnection(self: *Listener, connection: std.net.StreamServer.Connection) !void {
+        defer connection.stream.close();
+
+        // read the request
+        var buffer: [1024]u8 = undefined;
+        const bytes_read = try connection.stream.readAll(&buffer);
+        const request = buffer[0..bytes_read];
+
+        // a basic response
+        const response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 13\r\n\r\nHello, World!";
+
+        _ = try connection.stream.writeAll(response);
+    }
+
+    // stop the listener
+    pub fn stop(self: *Listener) !void {
+        if (!self.is_running) return;
+
+        self.is_running = false;
+        try self.server.close();
+        std.log.info("Listener stopped on port {d}", .{self.port.number});
+    }
+
+    // clean up the listener resources
+    pub fn deinit(self: *Listener) void {
+        if (self.is_running) {
+            _ = self.stop();
+        }
+        self.server.deinit();
+    }
+};
