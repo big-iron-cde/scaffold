@@ -24,7 +24,6 @@ pub fn build(b: *std.Build) void {
     exe.linkLibrary(docker.artifact("docker"));
 
     exe.root_module.addImport("zinc", zinc.module("zinc"));
-    //exe.linkLibrary(zinc.artifact("zinc"));
 
     // setup run command
     const run_cmd = b.addRunArtifact(exe);
