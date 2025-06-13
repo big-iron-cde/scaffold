@@ -10,6 +10,10 @@ pub fn build(b: *std.Build) void {
 
     const uuid = b.dependency("uuid", .{ .target = target, .optimize = optimize });
     const docker = b.dependency("docker", .{ .target = target, .optimize = optimize });
+    const zinc = b.dependency("zinc", .{
+        .target = target,
+        .optimize = optimize,
+    });
 
     b.installArtifact(exe);
 
@@ -18,6 +22,9 @@ pub fn build(b: *std.Build) void {
 
     exe.root_module.addImport("docker", docker.module("docker"));
     exe.linkLibrary(docker.artifact("docker"));
+
+    exe.root_module.addImport("zinc", zinc.module("zinc"));
+    exe.linkLibrary(zinc.artifact("zinc"));
 
     // setup run command
     const run_cmd = b.addRunArtifact(exe);

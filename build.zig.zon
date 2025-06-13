@@ -44,6 +44,10 @@
             .url = "https://github.com/big-iron-cde/zig-docker/archive/refs/tags/0.3.1.tar.gz",
             .hash = "docker-0.3.1-dbHWXOmuAgD72GNfXPKrGBjaJC7RlZiCJ892GB32-5YI",
         },
+        .zinc = .{
+            .url = "https://github.com/zon-dev/zinc/archive/refs/heads/main.zip",
+            .hash = "zinc-0.1.0-beta.5-uL00zYKeAQCy-ZN_xrjLGNltmyPLb3xD9R_HYHAMTITQ",
+        },
     },
     .paths = .{
         "build.zig",
