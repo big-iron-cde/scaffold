@@ -222,7 +222,7 @@ pub const Worker = struct {
         // state machine
         try t.transition(.Running);
         // debug print of the task name and ID
-        std.debug.print("Running task {s} (ID: {any})\n", .{ t.name, uuid.urn.serialize(t.ID) });
+        std.debug.print("Running task {s} (ID: {s})\n", .{ t.name, &uuid.urn.serialize(t.ID) });
 
         // if it's a container task, start it
         if (t.image) |_| {
@@ -249,6 +249,6 @@ pub const Worker = struct {
         // remove the task from the task map
         _ = self.tasks.swapRemove(t.ID);
         // debug print
-        std.debug.print("Stopping task {s} (ID: {any})\n", .{ t.name, uuid.urn.serialize(t.ID) });
+        std.debug.print("Stopping task {s} (ID: {s})\n", .{ t.name, &uuid.urn.serialize(t.ID) });
     }
 };
