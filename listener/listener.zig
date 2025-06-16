@@ -91,33 +91,26 @@ pub const Port = struct {
 
 // LISTENER IMPLEMENTATION
 
-pub const Listener = struct {
-    server: *zinc.Server,
-    allocator: std.mem.Allocator,
+pub fn Listener(allocator: std.mem.Allocator) !struct {
+    server: zinc.Server,
     port: Port,
-    is_running: bool,
-
-    // initialize a new listener with an available port
-    pub fn init(allocator: std.mem.Allocator) !Listener {
-        // find an available port
-        const port = try Port.findAvailable();
-
-        // initialize Zinc with our port
-        var z = try zinc.init(.{
-            .port = port.number,
-        });
-
-        // create a basic route for testing
-        var router = z.getRouter();
-        try router.get("/", simpleHandler);
-
-        return Listener{
-            .server = z, // store the zinc server
-            .allocator = allocator,
-            .port = port,
-            .is_running = false,
-        };
-    }
+} {
+    // find an available port
+    const port = try Port.findAvailable();
+    
+    // initialize zinc with our port
+    var server = try zinc.init(.{ .port = port.number });
+    
+    // create routes
+    var router = server.getRouter();
+    try router.get("/", simpleHandler);
+    try router.get("/version", versionHandler);
+    
+    return .{
+        .server = server,
+        .port = port,
+    };
+}
 
     // start the listener and begin accepting connections
     pub fn start(self: *Listener) !void {
