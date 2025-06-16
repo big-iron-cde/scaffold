@@ -4,6 +4,7 @@ const docker = @import("docker");
 const worker = @import("src/worker/worker.zig");
 const task = @import("src/task/task.zig");
 const scheduler = @import("src/scheduler/scheduler.zig");
+const listener = @import("listener/listener.zig");
 
 test "create worker" {
     std.log.warn("\n===== TESTING CREATE WORKER =====\n", .{});
@@ -331,4 +332,74 @@ test "launch container" {
 
     // clean up
     try w.stopTask(t);
+}
+
+test "listener basic functionality" {
+    std.log.warn("\n===== TESTING LISTENER =====\n", .{});
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const alloc = gpa.allocator();
+
+    // create the listener
+    var l = try listener.Listener.init(alloc);
+    defer l.deinit();
+
+    // save the port for client requests
+    const port = l.port.number;
+    std.log.warn("Listener initialized on port {d}\n", .{port});
+
+    // star the listener in a seperate thread
+    const thread = try std.Thread.spawn(.{}, startListenerThread, .{&l});
+
+    // giev time to start up
+    std.time.sleep(100 * std.time.ns_per_ms);
+
+    // try to make a HTTP request to the root endpoint
+    try testListenerRoot(port);
+
+    // then, after request, stop the listener
+    l.stop();
+    thread.join();
+}
+
+// helper function to start the listener in a thread
+fn startListenerThread(l: *listener.Listener) void {
+    l.start() catch |err| {
+        std.log.err("Failed to start listener: {s}", .{@errorName(err)});
+    };
+}
+
+// test the root endpoint
+fn testListenerRoot(port: u16) !void {
+    // format the URL with the dynamic port
+    const url = try std.fmt.allocPrint(std.heap.page_allocator, "http://localhost:{d}/", .{port});
+    defer std.heap.page_allocator.free(url);
+
+    // create a client
+    var client = std.http.Client{
+        .allocator = std.heap.page_allocator,
+    };
+    defer client.deinit();
+
+    // make the request
+    var headers = std.http.Headers.init(std.heap.page_allocator);
+    defer headers.deinit();
+
+    var request = try client.request(.GET, try std.Uri.parse(url), headers, .{});
+    defer request.deinit();
+
+    try request.start();
+    try request.finish();
+    try request.wait();
+
+    // verify response
+    try std.testing.expectEqual(@as(u16, 200), request.response.status);
+
+    // read the response body
+    const body = try request.reader().readAllAlloc(std.heap.page_allocator, 8192);
+    defer std.heap.page_allocator.free(body);
+
+    std.log.warn("Response from server: {s}\n", .{body});
+
+    // verify the response contains the expected text
+    try std.testing.expect(std.mem.indexOf(u8, body, "Scaffold Listener is running") != null);
 }
