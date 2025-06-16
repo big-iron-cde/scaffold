@@ -1,8 +1,4 @@
 const std = @import("std");
-const zinc = @import("zinc");
-
-// global visitor counter
-var visitor_count: std.atomic.Value(u32) = std.atomic.Value(u32).init(0);
 
 // PORT IMPLEMENTATION
 
@@ -29,7 +25,9 @@ pub const Port = struct {
             return Error.RestrictedPort;
         }
 
-        if (!isAvailable(port_number)) {
+
+        if (!try isAvailable(port_number)) {
+
             return Error.PortUnavailable;
         }
 
@@ -42,6 +40,7 @@ pub const Port = struct {
         // with the current time (so it behaves diff every run)
         var prng = std.rand.DefaultPrng.init(@intCast(std.time.milliTimestamp()));
         const random = prng.random();
+
         // try to find an available port
         var attempts: usize = 0;
         const max_attempts = 1000;
@@ -58,8 +57,7 @@ pub const Port = struct {
             // check if the port is available
             if (try isAvailable(port_number)) {
                 return Port{ .number = port_number };
-            } else {
-                std.log.err("Port {d} is unavailable, trying another...", .{port_number});
+
             }
         }
         return Error.NoAvailablePort;
@@ -74,75 +72,104 @@ pub const Port = struct {
     }
 
     // test if a port is available by trying to bind to it
-    fn isAvailable(port: u16) bool {
+
+    fn isAvailable(port: u16) !bool {
+        // try to bind to the port to see if it is available
+        var server = std.net.StreamServer.init(.{});
+        defer server.deinit();
 
         // going to local but might need to change when developing (?)
-        const address = std.net.Address.resolveIp("0.0.0.0", port) catch |err| {
-            std.log.err("{any}", .{err});
-            return false;
-        };
+        const address = try std.net.Address.parseIp("0.0.0.0", port);
 
-        var listener = address.listen(.{ .reuse_address = true }) catch |err| {
+        const listener = server.listen(address) catch |err| {
             if (err == Error.AddressInUse) {
-                std.log.err("{any}", .{err});
+                return false;
             }
-            return false;
+            return err;
         };
         defer listener.deinit();
         return true;
     }
 };
 
-// LISTENER FUNCTIONS
-/// Initialize and set up a zinc server on port 2325
-pub fn initZincServer() !*zinc.Engine {
-    // Use constant port 2325
-    const port = try Port.init(2325);
+// LISTENER IMPLEMENTATION
 
-    // Initialize zinc with our port
-    var server = try zinc.init(.{ .port = port.number });
+pub const Listener = struct {
+    server: std.net.StreamServer,
+    allocator: std.mem.Allocator,
+    port: Port,
+    is_running: bool,
 
-    // Set up routes
-    var router = server.getRouter();
-    try router.get("/", rootHandler);
-    try router.get("/version", versionHandler);
+    // initialize a new listener with an available port
+    pub fn init(allocator: std.mem.Allocator) !Listener {
+        // find an available port
+        const port = try Port.findAvailable();
 
-    // Print the router configuration
-    router.printRouter();
+        return Listener{
+            .server = std.net.StremServer.init(.{
+                .reuse_address = true,
+            }),
+            .allocator = allocator,
+            .port = port,
+            .is_running = false,
+        };
+    }
 
-    std.log.info("Zinc server initialized on port {d}", .{port.number});
+    // start the listener and begin acceting connections
+    pub fn start(self: *Listener) !void {
+        // create the address to listen on
+        const address = try std.net.Address.parseIp("0.0.0.0", self.port.number);
 
-    return server;
-}
+        // start listening on the port
+        try self.server.listen(address);
+        self.is_running = true;
 
-/// run the server (this will block until shutdown)
-pub fn runServer(server: *zinc.Engine) !void {
-    try server.run();
-}
+        std.log.info("Listener started on port {d}", .{self.port.number});
 
-pub fn shutdownServer(server: *zinc.Engine) !void {
-    server.deinit();
-    std.log.info("Zinc server has been shut down", .{});
-}
+        // accept connection until stopped
+        while (self.is_running) {
+            const connection = self.server.accept() catch |err| {
+                std.log.err("Error accepting connection: {s}", .{@errorName(err)});
+                continue;
+            };
 
-// handler functions
-fn rootHandler(ctx: *zinc.Context) !void {
-    // increment visitor count to test
-    const current_visitors = visitor_count.fetchAdd(1, .monotonic) + 1;
+            // handle the connection
+            self.handleConnection(connection) catch |err| {
+                std.log.err("Error handling connection: {s}", .{@errorName(err)});
+            };
+        }
+    }
 
-    const message = try std.fmt.allocPrint(ctx.allocator, "Scaffold Listener is running - Visitors: {d}", .{current_visitors});
-    defer ctx.allocator.free(message);
+    // handle a single connection
+    fn handleConnection(self: *Listener, connection: std.net.StreamServer.Connection) !void {
+        defer connection.stream.close();
 
-    try ctx.text(message, .{});
-}
+        // read the request
+        var buffer: [1024]u8 = undefined;
+        const bytes_read = try connection.stream.readAll(&buffer);
+        const request = buffer[0..bytes_read];
 
-fn versionHandler(ctx: *zinc.Context) !void {
-    const current_visitors = visitor_count.load(.monotonic);
+        // a basic response
+        const response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 13\r\n\r\nHello, World!";
 
-    try ctx.json(.{
-        .version = "0.1.0",
-        .name = "Scaffold Listener",
-        .timestamp = std.time.timestamp(),
-        .current_visitors = current_visitors,
-    }, .{});
-}
+        _ = try connection.stream.writeAll(response);
+    }
+
+    // stop the listener
+    pub fn stop(self: *Listener) !void {
+        if (!self.is_running) return;
+
+        self.is_running = false;
+        try self.server.close();
+        std.log.info("Listener stopped on port {d}", .{self.port.number});
+    }
+
+    // clean up the listener resources
+    pub fn deinit(self: *Listener) void {
+        if (self.is_running) {
+            _ = self.stop();
+        }
+        self.server.deinit();
+    }
+};
+

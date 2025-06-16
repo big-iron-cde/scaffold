@@ -15,6 +15,11 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    const redis = b.dependency("okredis", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     b.installArtifact(exe);
 
     exe.root_module.addImport("uuid", uuid.module("uuid"));
@@ -24,6 +29,9 @@ pub fn build(b: *std.Build) void {
     exe.linkLibrary(docker.artifact("docker"));
 
     exe.root_module.addImport("zinc", zinc.module("zinc"));
+
+
+    exe.root_module.addImport("redis", redis.module("okredis"));
 
     // setup run command
     const run_cmd = b.addRunArtifact(exe);
@@ -47,7 +55,9 @@ pub fn build(b: *std.Build) void {
     unit_tests.root_module.addImport("uuid", uuid.module("uuid"));
     unit_tests.root_module.addImport("docker", docker.module("docker"));
     unit_tests.root_module.addImport("zinc", zinc.module("zinc"));
-    
+
+    unit_tests.root_module.addImport("redis", redis.module("okredis"));
+
     // install and run the tests
     b.installArtifact(unit_tests);
     const run_unit_tests = b.addRunArtifact(unit_tests);
