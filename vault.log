@@ -1,0 +1,127 @@
+==> Vault server configuration:
+
+Administrative Namespace: 
+             Api Address: https://auth.big-iron.dev
+                     Cgo: disabled
+         Cluster Address: https://auth.big-iron.dev:444
+   Environment Variables: COLORTERM, HOME, LANG, LOGNAME, MAIL, PATH, SHELL, SUDO_COMMAND, SUDO_GID, SUDO_UID, SUDO_USER, TERM, USER
+              Go Version: go1.24.3
+              Listener 1: tcp (addr: "0.0.0.0:8200", cluster address: "0.0.0.0:8201", disable_request_limiter: "false", max_request_duration: "1m30s", max_request_size: "33554432", tls: "enabled")
+               Log Level: 
+                   Mlock: supported: true, enabled: false
+           Recovery Mode: false
+                 Storage: file
+                 Version: Vault v1.19.5, built 2025-05-29T09:17:06Z
+             Version Sha: 7010adf2c67686681908f04ec8e9357f19066f4f
+
+==> Vault server started! Log data will stream in below:
+
+2025-06-13T19:29:08.617Z [WARN]  unknown or unsupported field vault_addr found in configuration at /etc/vault.d/config.json:16:1
+2025-06-13T19:29:08.617Z [INFO]  proxy environment: http_proxy="" https_proxy="" no_proxy=""
+2025-06-13T19:29:08.618Z [INFO]  incrementing seal generation: generation=1
+2025-06-13T19:29:08.618Z [INFO]  core: Initializing version history cache for core
+2025-06-13T19:29:08.619Z [INFO]  events: Starting event system
+2025-06-13T19:29:49.385Z [INFO]  core.cluster-listener.tcp: starting listener: listener_address=0.0.0.0:8201
+2025-06-13T19:29:49.385Z [INFO]  core.cluster-listener: serving cluster requests: cluster_listen_address=[::]:8201
+2025-06-13T19:29:49.385Z [INFO]  core: post-unseal setup starting
+2025-06-13T19:29:49.386Z [INFO]  core: loaded wrapping token key
+2025-06-13T19:29:49.386Z [INFO]  core: successfully setup plugin runtime catalog
+2025-06-13T19:29:49.386Z [INFO]  core: successfully setup plugin catalog: plugin-directory=""
+2025-06-13T19:29:49.388Z [INFO]  core: successfully mounted: type=system version="v1.19.5+builtin.vault" path=sys/ namespace="ID: root. Path: "
+2025-06-13T19:29:49.388Z [INFO]  core: successfully mounted: type=identity version="v1.19.5+builtin.vault" path=identity/ namespace="ID: root. Path: "
+2025-06-13T19:29:49.388Z [INFO]  core: successfully mounted: type=cubbyhole version="v1.19.5+builtin.vault" path=cubbyhole/ namespace="ID: root. Path: "
+2025-06-13T19:29:49.390Z [INFO]  core: successfully mounted: type=token version="v1.19.5+builtin.vault" path=token/ namespace="ID: root. Path: "
+2025-06-13T19:29:49.390Z [INFO]  core: successfully mounted: type=oidc version="v1.19.5+builtin.vault" path=oidc/ namespace="ID: root. Path: "
+2025-06-13T19:29:49.391Z [INFO]  rollback: Starting the rollback manager with 256 workers
+2025-06-13T19:29:49.391Z [INFO]  rollback: starting rollback manager
+2025-06-13T19:29:49.391Z [INFO]  core: restoring leases
+2025-06-13T19:29:49.392Z [INFO]  expiration: lease restore complete
+2025-06-13T19:29:49.392Z [INFO]  identity: entities restored
+2025-06-13T19:29:49.392Z [INFO]  identity: groups restored
+2025-06-13T19:29:49.392Z [INFO]  core: usage gauge collection is disabled
+2025-06-13T19:29:49.394Z [INFO]  core: post-unseal setup complete
+2025-06-13T19:29:49.394Z [INFO]  core: vault is unsealed
+2025-06-13T20:11:27.890Z [INFO]  http: TLS handshake error from 127.0.0.1:35670: client sent an HTTP request to an HTTPS server
+2025-06-13T20:11:28.370Z [INFO]  http: TLS handshake error from 127.0.0.1:35684: client sent an HTTP request to an HTTPS server
+2025-06-14T05:07:03.972Z [INFO]  http: TLS handshake error from 104.234.115.13:21395: read tcp4 143.198.162.54:8200->104.234.115.13:21395: i/o timeout
+2025-06-14T05:07:42.916Z [INFO]  http: TLS handshake error from 104.234.115.13:36840: client sent an HTTP request to an HTTPS server
+2025-06-14T05:07:55.086Z [INFO]  http: TLS handshake error from 104.234.115.13:38088: client sent an HTTP request to an HTTPS server
+2025-06-14T05:07:56.246Z [INFO]  http: TLS handshake error from 104.234.115.13:38102: client sent an HTTP request to an HTTPS server
+2025-06-14T05:07:57.335Z [INFO]  http: TLS handshake error from 104.234.115.13:38120: client sent an HTTP request to an HTTPS server
+2025-06-14T05:07:58.920Z [INFO]  http: TLS handshake error from 104.234.115.13:38138: client sent an HTTP request to an HTTPS server
+2025-06-14T05:08:00.006Z [INFO]  http: TLS handshake error from 104.234.115.13:38156: client sent an HTTP request to an HTTPS server
+2025-06-14T05:08:01.114Z [INFO]  http: TLS handshake error from 104.234.115.13:38178: client sent an HTTP request to an HTTPS server
+2025-06-14T05:08:02.219Z [INFO]  http: TLS handshake error from 104.234.115.13:38198: client sent an HTTP request to an HTTPS server
+2025-06-14T05:08:03.332Z [INFO]  http: TLS handshake error from 104.234.115.13:50052: client sent an HTTP request to an HTTPS server
+2025-06-14T05:08:04.467Z [INFO]  http: TLS handshake error from 104.234.115.13:50068: client sent an HTTP request to an HTTPS server
+2025-06-14T05:08:05.559Z [INFO]  http: TLS handshake error from 104.234.115.13:50086: client sent an HTTP request to an HTTPS server
+2025-06-14T05:08:06.658Z [INFO]  http: TLS handshake error from 104.234.115.13:50094: client sent an HTTP request to an HTTPS server
+2025-06-14T05:08:07.726Z [INFO]  http: TLS handshake error from 104.234.115.13:50108: client sent an HTTP request to an HTTPS server
+2025-06-14T05:08:08.836Z [INFO]  http: TLS handshake error from 104.234.115.13:50132: client sent an HTTP request to an HTTPS server
+2025-06-14T05:08:09.921Z [INFO]  http: TLS handshake error from 104.234.115.13:50158: client sent an HTTP request to an HTTPS server
+2025-06-14T07:01:58.171Z [INFO]  http: TLS handshake error from 172.104.11.46:16184: client sent an HTTP request to an HTTPS server
+2025-06-14T11:56:03.579Z [INFO]  http: TLS handshake error from 20.169.81.155:43512: EOF
+2025-06-14T17:25:41.877Z [INFO]  http: TLS handshake error from 87.236.176.108:52817: client sent an HTTP request to an HTTPS server
+2025-06-14T17:25:42.928Z [INFO]  http: TLS handshake error from 185.247.137.68:46083: read tcp4 143.198.162.54:8200->185.247.137.68:46083: read: connection reset by peer
+2025-06-14T17:26:16.066Z [INFO]  http: TLS handshake error from 185.247.137.48:59857: read tcp4 143.198.162.54:8200->185.247.137.48:59857: read: connection reset by peer
+2025-06-14T17:26:49.203Z [INFO]  http: TLS handshake error from 87.236.176.40:35743: read tcp4 143.198.162.54:8200->87.236.176.40:35743: read: connection reset by peer
+2025-06-14T17:27:22.274Z [INFO]  http: TLS handshake error from 185.247.137.47:56447: tls: client requested unsupported application protocols ([http/0.9 http/1.0 spdy/1 spdy/2 spdy/3 h2c hq])
+2025-06-14T17:27:55.410Z [INFO]  http: TLS handshake error from 185.247.137.54:42779: tls: client requested unsupported application protocols ([hq h2c spdy/3 spdy/2 spdy/1 http/1.0 http/0.9])
+2025-06-14T17:28:28.547Z [INFO]  http: TLS handshake error from 87.236.176.69:34247: tls: client offered only unsupported versions: [302 301]
+2025-06-14T17:29:01.752Z [INFO]  http: TLS handshake error from 185.247.137.40:57149: read tcp4 143.198.162.54:8200->185.247.137.40:57149: read: connection reset by peer
+2025-06-14T17:29:34.889Z [INFO]  http: TLS handshake error from 87.236.176.57:46821: read tcp4 143.198.162.54:8200->87.236.176.57:46821: read: connection reset by peer
+2025-06-14T17:30:08.027Z [INFO]  http: TLS handshake error from 87.236.176.39:53869: read tcp4 143.198.162.54:8200->87.236.176.39:53869: read: connection reset by peer
+2025-06-14T17:30:41.164Z [INFO]  http: TLS handshake error from 185.247.137.45:38929: read tcp4 143.198.162.54:8200->185.247.137.45:38929: read: connection reset by peer
+2025-06-14T21:17:56.288Z [INFO]  http: TLS handshake error from 20.84.152.213:48786: tls: first record does not look like a TLS handshake
+2025-06-15T01:42:16.207Z [INFO]  http: TLS handshake error from 162.216.150.193:62356: client sent an HTTP request to an HTTPS server
+2025-06-15T03:48:39.922Z [INFO]  http: TLS handshake error from 147.185.133.186:59678: client sent an HTTP request to an HTTPS server
+2025-06-15T06:11:28.416Z [INFO]  http: TLS handshake error from 3.130.96.91:34380: read tcp4 143.198.162.54:8200->3.130.96.91:34380: i/o timeout
+2025-06-15T06:13:39.894Z [INFO]  http: TLS handshake error from 3.130.96.91:53494: client sent an HTTP request to an HTTPS server
+2025-06-15T06:15:35.923Z [INFO]  http: TLS handshake error from 3.130.96.91:50064: client sent an HTTP request to an HTTPS server
+2025-06-15T06:19:14.880Z [INFO]  http: TLS handshake error from 3.130.96.91:41830: tls: first record does not look like a TLS handshake
+2025-06-15T11:07:04.647Z [WARN]  core.cluster-listener: no TLS config found for ALPN: ALPN=[]
+2025-06-15T14:19:19.380Z [INFO]  http: TLS handshake error from 147.185.133.199:64292: client sent an HTTP request to an HTTPS server
+2025-06-15T22:10:25.642Z [INFO]  http: TLS handshake error from 44.220.188.125:60308: client sent an HTTP request to an HTTPS server
+2025-06-15T22:10:30.658Z [INFO]  http: TLS handshake error from 44.220.188.125:60310: EOF
+2025-06-15T22:10:30.668Z [INFO]  http: TLS handshake error from 44.220.188.125:36540: client sent an HTTP request to an HTTPS server
+2025-06-15T22:10:30.686Z [INFO]  http: TLS handshake error from 44.220.188.125:36556: client sent an HTTP request to an HTTPS server
+2025-06-16T01:35:53.341Z [WARN]  core.cluster-listener: no TLS config found for ALPN: ALPN=["hq", "h2c", "h2", "spdy/3", "spdy/2", "spdy/1", "http/1.1", "http/1.0", "http/0.9"]
+2025-06-16T01:35:58.305Z [WARN]  core.cluster-listener: no TLS config found for ALPN: ALPN=[]
+2025-06-16T03:01:02.490Z [INFO]  http: TLS handshake error from 66.240.219.146:55812: client sent an HTTP request to an HTTPS server
+2025-06-16T03:01:03.624Z [INFO]  http: TLS handshake error from 66.240.219.146:56130: EOF
+2025-06-16T03:01:03.687Z [INFO]  http: TLS handshake error from 66.240.219.146:56498: client sent an HTTP request to an HTTPS server
+2025-06-16T03:01:04.986Z [INFO]  http: TLS handshake error from 66.240.219.146:56716: EOF
+2025-06-16T03:01:05.113Z [INFO]  http: TLS handshake error from 66.240.219.146:56750: EOF
+2025-06-16T03:01:05.238Z [INFO]  http: TLS handshake error from 66.240.219.146:56770: EOF
+2025-06-16T03:01:05.327Z [INFO]  http: TLS handshake error from 66.240.219.146:56786: tls: client requested unsupported application protocols ([http/0.9 http/1.0 spdy/1 spdy/2 spdy/3 h2c hq])
+2025-06-16T03:01:05.468Z [INFO]  http: TLS handshake error from 66.240.219.146:56812: tls: client requested unsupported application protocols ([hq h2c spdy/3 spdy/2 spdy/1 http/1.0 http/0.9])
+2025-06-16T03:01:05.595Z [INFO]  http: TLS handshake error from 66.240.219.146:56956: tls: client offered only unsupported versions: [302 301]
+2025-06-16T03:01:05.937Z [INFO]  http: TLS handshake error from 66.240.219.146:57246: EOF
+2025-06-16T03:01:06.064Z [INFO]  http: TLS handshake error from 66.240.219.146:57462: EOF
+2025-06-16T03:01:06.190Z [INFO]  http: TLS handshake error from 66.240.219.146:57534: EOF
+2025-06-16T03:01:06.328Z [INFO]  http: TLS handshake error from 66.240.219.146:57576: EOF
+2025-06-16T03:01:06.485Z [INFO]  http: TLS handshake error from 66.240.219.146:57646: tls: client offered only unsupported versions: [301]
+2025-06-16T03:01:06.688Z [INFO]  http: TLS handshake error from 66.240.219.146:57722: tls: unsupported SSLv2 handshake received
+2025-06-16T03:01:06.887Z [INFO]  http: TLS handshake error from 66.240.219.146:57782: tls: client offered only unsupported versions: []
+2025-06-16T03:01:07.061Z [INFO]  http: TLS handshake error from 66.240.219.146:57844: tls: client offered only unsupported versions: [302 301]
+2025-06-16T03:18:55.146Z [INFO]  http: TLS handshake error from 162.216.150.211:65278: client sent an HTTP request to an HTTPS server
+2025-06-16T05:39:50.006Z [INFO]  http: TLS handshake error from 192.155.90.220:6300: remote error: tls: unexpected message
+2025-06-16T06:39:07.417Z [INFO]  http: TLS handshake error from 212.102.40.218:27176: read tcp4 143.198.162.54:8200->212.102.40.218:27176: read: connection reset by peer
+2025-06-16T06:39:07.493Z [INFO]  http: TLS handshake error from 212.102.40.218:30384: read tcp4 143.198.162.54:8200->212.102.40.218:30384: read: connection reset by peer
+2025-06-16T06:39:07.567Z [INFO]  http: TLS handshake error from 212.102.40.218:33410: read tcp4 143.198.162.54:8200->212.102.40.218:33410: read: connection reset by peer
+2025-06-16T06:39:07.604Z [INFO]  http: TLS handshake error from 212.102.40.218:36598: tls: client requested unsupported application protocols ([http/0.9 http/1.0 spdy/1 spdy/2 spdy/3 h2c hq])
+2025-06-16T06:39:07.678Z [INFO]  http: TLS handshake error from 212.102.40.218:39708: tls: client requested unsupported application protocols ([hq h2c spdy/3 spdy/2 spdy/1 http/1.0 http/0.9])
+2025-06-16T06:39:07.751Z [INFO]  http: TLS handshake error from 212.102.40.218:42678: tls: client offered only unsupported versions: [302 301]
+2025-06-16T06:39:07.862Z [INFO]  http: TLS handshake error from 212.102.40.218:45690: read tcp4 143.198.162.54:8200->212.102.40.218:45690: read: connection reset by peer
+2025-06-16T06:39:07.937Z [INFO]  http: TLS handshake error from 212.102.40.218:48824: read tcp4 143.198.162.54:8200->212.102.40.218:48824: read: connection reset by peer
+2025-06-16T06:39:08.013Z [INFO]  http: TLS handshake error from 212.102.40.218:51906: read tcp4 143.198.162.54:8200->212.102.40.218:51906: read: connection reset by peer
+2025-06-16T06:39:08.087Z [INFO]  http: TLS handshake error from 212.102.40.218:55082: read tcp4 143.198.162.54:8200->212.102.40.218:55082: read: connection reset by peer
+2025-06-16T07:47:32.112Z [INFO]  http: TLS handshake error from 3.130.96.91:44692: read tcp4 143.198.162.54:8200->3.130.96.91:44692: i/o timeout
+2025-06-16T07:48:55.128Z [INFO]  http: TLS handshake error from 3.130.96.91:38450: client sent an HTTP request to an HTTPS server
+2025-06-16T07:53:36.674Z [INFO]  http: TLS handshake error from 3.130.96.91:51790: tls: first record does not look like a TLS handshake
+2025-06-16T08:23:19.883Z [INFO]  http: TLS handshake error from 20.106.186.90:47768: tls: first record does not look like a TLS handshake
+2025-06-16T15:36:14.423Z [INFO]  http: TLS handshake error from 162.216.150.131:65294: client sent an HTTP request to an HTTPS server
+2025-06-16T16:15:07.760Z [INFO]  http: TLS handshake error from 20.40.218.136:50466: tls: first record does not look like a TLS handshake
+2025-06-16T18:34:41.550Z [INFO]  http: TLS handshake error from 127.0.0.1:35200: remote error: tls: bad certificate
+2025-06-16T18:52:12.520Z [WARN]  auth.oidc.auth_oidc_aac1cb5d: unauthorized redirect_uri: redirect_uri=https://dev1.big-iron.dev:8200/ui/vault/auth/oidc/oidc/callback
+2025-06-16T18:52:14.129Z [WARN]  auth.oidc.auth_oidc_aac1cb5d: unauthorized redirect_uri: redirect_uri=https://dev1.big-iron.dev:8200/ui/vault/auth/oidc/oidc/callback
