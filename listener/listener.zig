@@ -89,58 +89,47 @@ pub const Port = struct {
     }
 };
 
-// LISTENER IMPLEMENTATION
+// LISTENER FUNCTIONS
+/// Initialize and set up a zinc server on port 2325
+pub fn initZincServer() !*zinc.Zinc {
+    // Use constant port 2325
+    const port = try Port.init(2325);
 
-pub fn Listener(allocator: std.mem.Allocator) !struct {
-    server: zinc.Server,
-    port: Port,
-} {
-    // find an available port
-    const port = try Port.findAvailable();
-    
-    // initialize zinc with our port
+    // Initialize zinc with our port
     var server = try zinc.init(.{ .port = port.number });
-    
-    // create routes
+
+    // Set up routes
     var router = server.getRouter();
-    try router.get("/", simpleHandler);
+    try router.get("/", rootHandler);
     try router.get("/version", versionHandler);
-    
-    return .{
-        .server = server,
-        .port = port,
-    };
+
+    // Print the router configuration
+    router.printRouter();
+
+    std.log.info("Zinc server initialized on port {d}", .{port.number});
+
+    return server;
 }
 
-    // start the listener and begin accepting connections
-    pub fn start(self: *Listener) !void {
-        self.is_running = true;
-        std.log.info("Listener started on port {d}", .{self.port.number});
+/// run the server (this will block until shutdown)
+pub fn runServer(server: *zinc.Zinc) !void {
+    try server.run();
+}
 
-        // this will block and handle connections
-        try self.server.run();
-    }
+pub fn shutdownServer(server: *zinc.Zinc) !void {
+    server.deinit();
+    std.log.info("Zinc server has been shut down", .{});
+}
 
-    // stop the listener
-    pub fn stop(self: *Listener) void {
-        if (!self.is_running) return;
-
-        self.is_running = false;
-        self.server.shutdown();
-        std.log.info("Listener stopped", .{});
-    }
-
-    // clean up resources
-    pub fn deinit(self: *Listener) void {
-        if (self.is_running) {
-            self.stop();
-        }
-        self.server.deinit();
-    }
-};
-
-// simple handler
-fn simpleHandler(ctx: *zinc.Context) anyerror!void {
-    // correct response method from docs
+// handler functions
+fn rootHandler(ctx: *zinc.Context) !void {
     try ctx.text("Scaffold Listener is running", .{});
+}
+
+fn versionHandler(ctx: *zinc.Context) !void {
+    try ctx.json(.{
+        .version = "0.1.0",
+        .name = "Scaffold Listener",
+        .timestamp = std.time.timestamp(),
+    }, .{});
 }
