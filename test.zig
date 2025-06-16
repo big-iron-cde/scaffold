@@ -4,7 +4,7 @@ const docker = @import("docker");
 const worker = @import("src/worker/worker.zig");
 const task = @import("src/task/task.zig");
 const scheduler = @import("src/scheduler/scheduler.zig");
-const listener = @import("listener/listener.zig");
+const listener = @import("src/listener/listener.zig");
 
 test "create worker" {
     std.log.warn("\n===== TESTING CREATE WORKER =====\n", .{});
