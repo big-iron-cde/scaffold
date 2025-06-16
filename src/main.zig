@@ -1,6 +1,6 @@
 pub fn main() !void {
-    var server = listener.initZincServer();
-    server.runServer();
+    var server = try listener.initZincServer();
+    try server.run();
 }
 
 const std = @import("std");

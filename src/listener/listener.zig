@@ -26,7 +26,7 @@ pub const Port = struct {
             return Error.RestrictedPort;
         }
 
-        if (!try isAvailable(port_number)) {
+        if (isAvailable(port_number)) {
             return Error.PortUnavailable;
         }
 
@@ -70,19 +70,19 @@ pub const Port = struct {
     }
 
     // test if a port is available by trying to bind to it
-    fn isAvailable(port: u16) !bool {
-        // try to bind to the port to see if it is available
-        var server = std.net.StreamServer.init(.{});
-        defer server.deinit();
+    fn isAvailable(port: u16) bool {
 
         // going to local but might need to change when developing (?)
-        const address = try std.net.Address.parseIp("0.0.0.0", port);
+        const address = std.net.Address.resolveIp("0.0.0.0", port) catch |err| {
+            std.log.err("{any}", .{err});
+            return false;
+        };
 
-        const listener = server.listen(address) catch |err| {
+        var listener = address.listen(.{ .reuse_address = true }) catch |err| {
             if (err == Error.AddressInUse) {
-                return false;
+                std.log.err("{any}", .{err});
             }
-            return err;
+            return false;
         };
         defer listener.deinit();
         return true;
@@ -91,7 +91,7 @@ pub const Port = struct {
 
 // LISTENER FUNCTIONS
 /// Initialize and set up a zinc server on port 2325
-pub fn initZincServer() !*zinc.Zinc {
+pub fn initZincServer() !*zinc.Engine {
     // Use constant port 2325
     const port = try Port.init(2325);
 
@@ -112,7 +112,7 @@ pub fn initZincServer() !*zinc.Zinc {
 }
 
 /// run the server (this will block until shutdown)
-pub fn runServer(server: *zinc.Zinc) !void {
+pub fn runServer(server: *zinc.Engine) !void {
     try server.run();
 }
 
