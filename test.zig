@@ -336,39 +336,40 @@ test "launch container" {
 
 test "listener basic functionality" {
     std.log.warn("\n===== TESTING LISTENER =====\n", .{});
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const alloc = gpa.allocator();
+    // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    // we don't need allocator anymore
+    // const alloc = gpa.allocator();
 
-    // create the listener
-    var l = try listener.Listener.init(alloc);
-    defer l.deinit();
+    // initialize the server
+    const server = try listener.initZincServer();
+    defer listener.shutdownServer(server) catch {};
 
-    // save the port for client requests
-    const port = l.port.number;
+    // the port is hardcoded to 2325
+    const port: u16 = 2325;
     std.log.warn("Listener initialized on port {d}\n", .{port});
 
-    // star the listener in a seperate thread
-    const thread = try std.Thread.spawn(.{}, startListenerThread, .{&l});
+    // start the listener in a separate thread
+    const thread = try std.Thread.spawn(.{}, startListenerThread, .{server});
 
-    // giev time to start up
+    // give it time to start up
     std.time.sleep(100 * std.time.ns_per_ms);
 
-    // try to make a HTTP request to the root endpoint
+    // make an HTTP request to the root endpoint
     try testListenerRoot(port);
 
-    // then, after request, stop the listener
-    l.stop();
+    // stop the listener
+    listener.shutdownServer(server) catch {};
     thread.join();
 }
 
-// helper function to start the listener in a thread
-fn startListenerThread(l: *listener.Listener) void {
-    l.start() catch |err| {
+// fix the thread function signature
+fn startListenerThread(server: anytype) void {
+    listener.runServer(server) catch |err| {
         std.log.err("Failed to start listener: {s}", .{@errorName(err)});
     };
 }
 
-// test the root endpoint
+// update testListenerRoot to use the correct port type
 fn testListenerRoot(port: u16) !void {
     // format the URL with the dynamic port
     const url = try std.fmt.allocPrint(std.heap.page_allocator, "http://localhost:{d}/", .{port});
