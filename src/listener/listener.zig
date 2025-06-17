@@ -26,7 +26,7 @@ pub const Port = struct {
             return Error.RestrictedPort;
         }
 
-        if (isAvailable(port_number)) {
+        if (!isAvailable(port_number)) {
             return Error.PortUnavailable;
         }
 
@@ -39,7 +39,6 @@ pub const Port = struct {
         // with the current time (so it behaves diff every run)
         var prng = std.rand.DefaultPrng.init(@intCast(std.time.milliTimestamp()));
         const random = prng.random();
-
         // try to find an available port
         var attempts: usize = 0;
         const max_attempts = 1000;
