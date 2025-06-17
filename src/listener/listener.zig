@@ -116,7 +116,7 @@ pub fn runServer(server: *zinc.Engine) !void {
     try server.run();
 }
 
-pub fn shutdownServer(server: *zinc.Zinc) !void {
+pub fn shutdownServer(server: *zinc.Engine) !void {
     server.deinit();
     std.log.info("Zinc server has been shut down", .{});
 }
