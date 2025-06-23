@@ -1,6 +1,9 @@
 const std = @import("std");
 const zinc = @import("zinc");
 
+// global visitor counter
+var visitor_count: std.atomic.Value(u32) = std.atomic.Value(u32).init(0);
+
 // PORT IMPLEMENTATION
 
 pub const Port = struct {
@@ -124,13 +127,22 @@ pub fn shutdownServer(server: *zinc.Engine) !void {
 
 // handler functions
 fn rootHandler(ctx: *zinc.Context) !void {
-    try ctx.text("Scaffold Listener is running", .{});
+    // increment visitor count to test
+    const current_visitors = visitor_count.fetchAdd(1, .monotonic) + 1;
+
+    const message = try std.fmt.allocPrint(ctx.allocator, "Scaffold Listener is running - Visitors: {d}", .{current_visitors});
+    defer ctx.allocator.free(message);
+
+    try ctx.text(message, .{});
 }
 
 fn versionHandler(ctx: *zinc.Context) !void {
+    const current_visitors = visitor_count.load(.monotonic);
+
     try ctx.json(.{
         .version = "0.1.0",
         .name = "Scaffold Listener",
         .timestamp = std.time.timestamp(),
+        .current_visitors = current_visitors,
     }, .{});
 }
