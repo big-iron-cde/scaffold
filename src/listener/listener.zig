@@ -55,6 +55,8 @@ pub const Port = struct {
             // check if the port is available
             if (try isAvailable(port_number)) {
                 return Port{ .number = port_number };
+            } else {
+                std.log.err("Port {d} is unavailable, trying another...", .{port_number});
             }
         }
         return Error.NoAvailablePort;
