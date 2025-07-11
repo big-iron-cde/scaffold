@@ -103,25 +103,37 @@ pub const Worker = struct {
     // create a docker container for the task
     fn createContainer(self: *Worker, t: *task.Task) !void {
         var arena = std.heap.ArenaAllocator.init(self.allocator);
-        defer arena.deinit(); // this will free all allocations at once
+        defer arena.deinit();
         const alloc = arena.allocator();
 
-        _ = struct { task_id: u128, task_name: []const u8 };
+        // add bind mounts for workspace persistence
+        const home_dir = std.posix.getenv("HOME") orelse "/tmp";
+        const workspace_path = try std.fmt.allocPrint(alloc, "{s}/scaffold-workspace-{s}", .{ home_dir, &uuid.urn.serialize(t.ID) });
+
+        // create workspace directory
+        std.fs.makeDirAbsolute(workspace_path) catch |err| switch (err) {
+            error.PathAlreadyExists => {},
+            else => return err,
+        };
+
+        const bind_mount = try std.fmt.allocPrint(alloc, "{s}:/workspace:rw", .{workspace_path});
+
+        // create an empty PortMap struct (since PortMap is just an empty struct in the old API)
+        const port_map = docker.PortMap{};
 
         const host_config = docker.HostConfig{
             .AutoRemove = true,
+            .PortBindings = port_map,
+            .Binds = &[_]?[]const u8{bind_mount},
         };
 
         const networking_config = docker.NetworkingConfig{};
-
         const container_name = uuid.urn.serialize(t.ID);
 
-        // create container using (nested structure)
         const create_response = try docker.@"/containers/create".post(alloc, .{
             .name = &container_name,
         }, .{
             .body = .{
-                // container configuration fields
                 .Image = t.image orelse {
                     std.log.err("Task {s} has no image specified", .{t.name});
                     return WorkerError.DockerError;
@@ -130,16 +142,16 @@ pub const Worker = struct {
                 .Env = t.env orelse &[_][]const u8{},
                 .AttachStdout = true,
                 .AttachStderr = true,
-                // nested configurations
                 .HostConfig = host_config,
                 .NetworkingConfig = networking_config,
             },
         });
 
-        // process the responses!
         switch (create_response) {
             .@"201" => |container| {
                 t.container_id = try self.allocator.dupe(u8, container.Id);
+                t.workspace_path = try self.allocator.dupe(u8, workspace_path);
+                std.log.info("Created container {s} with workspace {s}", .{ container.Id, workspace_path });
             },
             else => {
                 std.log.err("Failed to create container for task {s}: {any}", .{ t.name, create_response });

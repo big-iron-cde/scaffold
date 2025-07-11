@@ -1,22 +1,22 @@
+const std = @import("std");
+const uuid = @import("uuid");
+
 pub const State = enum(u8) { Pending, Scheduled, Completed, Running, Failed, Stopped };
 
 pub const Task = struct {
+    allocator: std.mem.Allocator,
     ID: u128,
     name: []const u8,
     state: State,
-    allocator: std.mem.Allocator,
-
+    image: ?[]const u8,
     // docker specific config
     // docker image to use
-    image: ?[]const u8 = null,
-    // the docker container ID
-    container_id: ?[]const u8 = null,
-    // env variables
-    env: ?[][]const u8 = null,
-    // the exit code of the task
-    exit_code: i32 = 0,
-    error_message: ?[]const u8 = null,
-    command: ?[][]const u8 = null,
+    command: ?[]const []const u8,
+    env: ?[]const []const u8,
+    container_id: ?[]const u8,
+    workspace_path: ?[]const u8,
+    exit_code: i32,
+    error_message: ?[]const u8,
 
     // initialize a new task with the given name
     pub fn init(allocator: std.mem.Allocator, name: []const u8) !*Task {
@@ -31,9 +31,10 @@ pub const Task = struct {
             .image = null,
             .container_id = null,
             .env = null,
-            .exit_code = 0,
-            .error_message = null,
             .command = null,
+            .workspace_path = null,
+            .exit_code = 0, // Now this field exists
+            .error_message = null, // Now this field exists
         };
 
         return task;
@@ -41,29 +42,20 @@ pub const Task = struct {
 
     // clean up all the task resources
     pub fn deinit(self: *Task) void {
-        // TODO: Determine why this call upsets the deallocation process
-        //defer self.allocator.free(self.ID);
         self.allocator.free(self.name);
-
-        if (self.image) |image| {
-            self.allocator.free(image);
-        }
-        if (self.container_id) |container_id| {
-            self.allocator.free(container_id);
-        }
+        if (self.image) |img| self.allocator.free(img);
+        if (self.container_id) |id| self.allocator.free(id);
+        if (self.workspace_path) |path| self.allocator.free(path);
+        if (self.error_message) |msg| self.allocator.free(msg); // Clean up error message
 
         if (self.command) |cmd| {
-            for (cmd) |arg| {
-                self.allocator.free(arg);
-            }
+            for (cmd) |arg| self.allocator.free(arg);
             self.allocator.free(cmd);
         }
 
-        if (self.env) |env_vars| {
-            for (env_vars) |env| {
-                self.allocator.free(env);
-            }
-            self.allocator.free(env_vars);
+        if (self.env) |environment| {
+            for (environment) |env_var| self.allocator.free(env_var);
+            self.allocator.free(environment);
         }
 
         self.allocator.destroy(self);
@@ -142,6 +134,3 @@ pub const Task = struct {
         try self.transition(if (exit_code == 0) .Completed else .Failed);
     }
 };
-
-const std = @import("std");
-const uuid = @import("uuid");
