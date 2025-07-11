@@ -10,6 +10,10 @@ pub fn build(b: *std.Build) void {
 
     const uuid = b.dependency("uuid", .{ .target = target, .optimize = optimize });
     const docker = b.dependency("docker", .{ .target = target, .optimize = optimize });
+    const zinc = b.dependency("zinc", .{
+        .target = target,
+        .optimize = optimize,
+    });
 
     b.installArtifact(exe);
 
@@ -18,6 +22,8 @@ pub fn build(b: *std.Build) void {
 
     exe.root_module.addImport("docker", docker.module("docker"));
     exe.linkLibrary(docker.artifact("docker"));
+
+    exe.root_module.addImport("zinc", zinc.module("zinc"));
 
     // setup run command
     const run_cmd = b.addRunArtifact(exe);
@@ -40,7 +46,8 @@ pub fn build(b: *std.Build) void {
 
     unit_tests.root_module.addImport("uuid", uuid.module("uuid"));
     unit_tests.root_module.addImport("docker", docker.module("docker"));
-
+    unit_tests.root_module.addImport("zinc", zinc.module("zinc"));
+    
     // install and run the tests
     b.installArtifact(unit_tests);
     const run_unit_tests = b.addRunArtifact(unit_tests);

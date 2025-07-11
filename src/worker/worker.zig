@@ -103,65 +103,55 @@ pub const Worker = struct {
     // create a docker container for the task
     fn createContainer(self: *Worker, t: *task.Task) !void {
         var arena = std.heap.ArenaAllocator.init(self.allocator);
-        defer arena.deinit(); // this will free all allocations at once
+        defer arena.deinit();
         const alloc = arena.allocator();
 
-        _ = struct { task_id: u128, task_name: []const u8 };
+        // add bind mounts for workspace persistence
+        const home_dir = std.posix.getenv("HOME") orelse "/tmp";
+        const workspace_path = try std.fmt.allocPrint(alloc, "{s}/scaffold-workspace-{s}", .{ home_dir, &uuid.urn.serialize(t.ID) });
 
-        const container_config = docker.ContainerConfig{
-            // TODO: Align fields with ContainerConfig definition
-            //       in zig-docker's direct.zig; for example: the
-            //       spec doesn't contain HostConfig
-            .Hostname = "",
-            .Domainname = "",
-            .User = "",
-            .AttachStdin = false,
-            .AttachStdout = true,
-            .AttachStderr = true,
-            .ExposedPorts = .{},
-            .Tty = false,
-            .OpenStdin = false,
-            .StdinOnce = false,
-            .Env = t.env orelse &[_][]const u8{},
-            .Cmd = t.command orelse &[_][]const u8{},
-            .Healthcheck = null,
-            .ArgsEscaped = false,
-            .Image = t.image orelse {
-                std.log.err("Task {s} has no image specified", .{t.name});
-                return WorkerError.DockerError;
-            },
-            .Volumes = .{},
-            .WorkingDir = "",
-            .Entrypoint = &[_][]const u8{},
-            .NetworkDisabled = false,
-            .MacAddress = "",
-            .OnBuild = &[_][]const u8{},
-            .Labels = .{},
-            .StopSignal = "",
-            .StopTimeout = 0,
-            .Shell = &[_][]const u8{},
+        // create workspace directory
+        std.fs.makeDirAbsolute(workspace_path) catch |err| switch (err) {
+            error.PathAlreadyExists => {},
+            else => return err,
         };
 
-        _ = docker.HostConfig{
+        const bind_mount = try std.fmt.allocPrint(alloc, "{s}:/workspace:rw", .{workspace_path});
+
+        // create an empty PortMap struct (since PortMap is just an empty struct in the old API)
+        const port_map = docker.PortMap{};
+
+        const host_config = docker.HostConfig{
             .AutoRemove = true,
+            .PortBindings = port_map,
+            .Binds = &[_]?[]const u8{bind_mount},
         };
 
-        _ = docker.NetworkingConfig{};
-
+        const networking_config = docker.NetworkingConfig{};
         const container_name = uuid.urn.serialize(t.ID);
 
-        // Need a longer lifetime?
-        //defer alloc.free(container_name);
-
-        // pass config objects
         const create_response = try docker.@"/containers/create".post(alloc, .{
             .name = &container_name,
-        }, .{ .body = container_config });
+        }, .{
+            .body = .{
+                .Image = t.image orelse {
+                    std.log.err("Task {s} has no image specified", .{t.name});
+                    return WorkerError.DockerError;
+                },
+                .Cmd = t.command orelse &[_][]const u8{},
+                .Env = t.env orelse &[_][]const u8{},
+                .AttachStdout = true,
+                .AttachStderr = true,
+                .HostConfig = host_config,
+                .NetworkingConfig = networking_config,
+            },
+        });
 
-        // process the responses!
         switch (create_response) {
             .@"201" => |container| {
                 t.container_id = try self.allocator.dupe(u8, container.Id);
+                t.workspace_path = try self.allocator.dupe(u8, workspace_path);
+                std.log.info("Created container {s} with workspace {s}", .{ container.Id, workspace_path });
             },
             else => {
                 std.log.err("Failed to create container for task {s}: {any}", .{ t.name, create_response });
@@ -222,7 +212,7 @@ pub const Worker = struct {
         // state machine
         try t.transition(.Running);
         // debug print of the task name and ID
-        std.debug.print("Running task {s} (ID: {any})\n", .{ t.name, uuid.urn.serialize(t.ID) });
+        std.debug.print("Running task {s} (ID: {s})\n", .{ t.name, &uuid.urn.serialize(t.ID) });
 
         // if it's a container task, start it
         if (t.image) |_| {
@@ -249,6 +239,6 @@ pub const Worker = struct {
         // remove the task from the task map
         _ = self.tasks.swapRemove(t.ID);
         // debug print
-        std.debug.print("Stopping task {s} (ID: {any})\n", .{ t.name, uuid.urn.serialize(t.ID) });
+        std.debug.print("Stopping task {s} (ID: {s})\n", .{ t.name, &uuid.urn.serialize(t.ID) });
     }
 };

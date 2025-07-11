@@ -41,8 +41,12 @@
             .hash = "uuid-0.3.0-oOieIYF1AAA_BtE7FvVqqTn5uEYTvvz7ycuVnalCOf8C",
         },
         .docker = .{
-            .url = "https://github.com/big-iron-cde/zig-docker/archive/refs/tags/0.3.1.tar.gz",
-            .hash = "docker-0.3.1-dbHWXOmuAgD72GNfXPKrGBjaJC7RlZiCJ892GB32-5YI",
+            .url = "https://github.com/big-iron-cde/zig-docker/archive/refs/tags/0.4.0.tar.gz",
+            .hash = "docker-0.3.1-dbHWXKyuAgBaD3snLSym6SJlXkP07blDF0Ub9bQMof3-",
+        },
+        .zinc = .{
+            .url = "https://github.com/zon-dev/zinc/archive/refs/heads/main.zip",
+            .hash = "zinc-0.1.0-beta.5-uL00zYKeAQCy-ZN_xrjLGNltmyPLb3xD9R_HYHAMTITQ",
         },
     },
     .paths = .{
