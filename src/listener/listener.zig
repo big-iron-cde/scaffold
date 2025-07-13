@@ -4,6 +4,18 @@ const zinc = @import("zinc");
 // global visitor counter
 var visitor_count: std.atomic.Value(u32) = std.atomic.Value(u32).init(0);
 
+// simple user port tracking
+var user_ports: std.StringHashMap(u16) = undefined;
+var allocated_ports: std.ArrayList(u16) = undefined;
+var gpa: std.heap.GeneralPurposeAllocator(.{}) = undefined;
+
+pub fn initPortTracking() void {
+    gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
+    user_ports = std.StringHashMap(u16).init(allocator);
+    allocated_ports = std.ArrayList(u16).init(allocator);
+}
+
 // PORT IMPLEMENTATION
 
 pub const Port = struct {
@@ -40,7 +52,7 @@ pub const Port = struct {
     pub fn findAvailable() Error!Port {
         // initialize a random number generator & seed it
         // with the current time (so it behaves diff every run)
-        var prng = std.rand.DefaultPrng.init(@intCast(std.time.milliTimestamp()));
+        var prng = std.Random.DefaultPrng.init(@intCast(std.time.milliTimestamp()));
         const random = prng.random();
         // try to find an available port
         var attempts: usize = 0;
@@ -51,21 +63,49 @@ pub const Port = struct {
             const port_number = random.intRangeAtMost(u16, min_port, max_port);
 
             // check if the port is restricted
-            if (isRestricted(port_number)) {
+            if (isRestricted(port_number) or isAllocated(port_number)) {
                 continue; // skip restricted ports
             }
 
             // check if the port is available
-            if (try isAvailable(port_number)) {
+            if (isAvailable(port_number)) {
+                allocated_ports.append(port_number) catch {};
                 return Port{ .number = port_number };
-            } else {
-                std.log.err("Port {d} is unavailable, trying another...", .{port_number});
             }
         }
         return Error.NoAvailablePort;
     }
 
-    // be able to check if the port is in the restricted list
+    // get or assign port for user
+    pub fn forUser(user_id: []const u8) Error!Port {
+        // check if user already has a port
+        if (user_ports.get(user_id)) |existing_port| {
+            return Port{ .number = existing_port };
+        }
+
+        // get new port and assign to user
+        const port = try findAvailable();
+        user_ports.put(user_id, port.number) catch {};
+
+        std.log.info("Assigned port {d} to user: {s}", .{ port.number, user_id });
+        return port;
+    }
+
+    // release user's port
+    pub fn releaseUser(user_id: []const u8) void {
+        if (user_ports.get(user_id)) |port_num| {
+            _ = user_ports.remove(user_id);
+            // remove from allocated list
+            for (allocated_ports.items, 0..) |port, i| {
+                if (port == port_num) {
+                    _ = allocated_ports.swapRemove(i);
+                    break;
+                }
+            }
+            std.log.info("Released port {d} for user: {s}", .{ port_num, user_id });
+        }
+    }
+
     fn isRestricted(port: u16) bool {
         for (restricted_ports) |restricted| {
             if (port == restricted) return true;
@@ -73,10 +113,15 @@ pub const Port = struct {
         return false;
     }
 
-    // test if a port is available by trying to bind to it
-    fn isAvailable(port: u16) bool {
+    // check if port is already allocated to someone
+    fn isAllocated(port: u16) bool {
+        for (allocated_ports.items) |allocated| {
+            if (port == allocated) return true;
+        }
+        return false;
+    }
 
-        // going to local but might need to change when developing (?)
+    fn isAvailable(port: u16) bool {
         const address = std.net.Address.resolveIp("0.0.0.0", port) catch |err| {
             std.log.err("{any}", .{err});
             return false;
@@ -94,22 +139,23 @@ pub const Port = struct {
 };
 
 // LISTENER FUNCTIONS
-/// Initialize and set up a zinc server on port 2325
 pub fn initZincServer() !*zinc.Engine {
+    // initialize port tracking
+    initPortTracking();
+
     // Use constant port 2325
     const port = try Port.init(2325);
 
-    // Initialize zinc with our port
     var server = try zinc.init(.{ .port = port.number });
 
-    // Set up routes
     var router = server.getRouter();
     try router.get("/", rootHandler);
     try router.get("/version", versionHandler);
+    // endpoints for container port management
+    try router.get("/port/:user_id", getUserPortHandler);
+    try router.post("/assign/:user_id", assignPortHandler);
 
-    // Print the router configuration
     router.printRouter();
-
     std.log.info("Zinc server initialized on port {d}", .{port.number});
 
     return server;
@@ -145,4 +191,36 @@ fn versionHandler(ctx: *zinc.Context) !void {
         .timestamp = std.time.timestamp(),
         .current_visitors = current_visitors,
     }, .{});
+}
+
+// simple handlers for port management
+fn getUserPortHandler(ctx: *zinc.Context) !void {
+    // get user_id from URL path parameter using Zinc's correct API
+    const user_param = ctx.getParam("user_id") orelse {
+        try ctx.json(.{ .@"error" = "Missing user_id parameter" }, .{ .status = .bad_request });
+        return;
+    };
+    const user_id = user_param.value;
+
+    if (user_ports.get(user_id)) |port| {
+        try ctx.json(.{ .user_id = user_id, .port = port }, .{});
+    } else {
+        try ctx.json(.{ .@"error" = "No port assigned" }, .{ .status = .not_found });
+    }
+}
+
+fn assignPortHandler(ctx: *zinc.Context) !void {
+    // get user_id from URL path parameter
+    const user_param = ctx.getParam("user_id") orelse {
+        try ctx.json(.{ .@"error" = "Missing user_id parameter" }, .{ .status = .bad_request });
+        return;
+    };
+    const user_id = user_param.value;
+
+    const port = Port.forUser(user_id) catch |err| {
+        try ctx.json(.{ .@"error" = @errorName(err) }, .{ .status = .internal_server_error });
+        return;
+    };
+
+    try ctx.json(.{ .user_id = user_id, .assigned_port = port.number }, .{});
 }

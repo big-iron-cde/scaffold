@@ -413,7 +413,7 @@ fn testListenerRoot(port: u16) !void {
 
 test "multiple clients see same version" {
     std.log.warn("\n===== TESTING MULTIPLE CLIENTS VERSION ENDPOINT =====\n", .{});
-    
+
     // initialize the server
     const server = try listener.initZincServer();
 
@@ -431,36 +431,36 @@ test "multiple clients see same version" {
     // simulate multiple clients accessing the version endpoint
     const num_clients = 3;
     var version_responses: [num_clients][]u8 = undefined;
-    
+
     for (0..num_clients) |i| {
         version_responses[i] = try testVersionEndpoint(port);
         std.log.warn("Client {d} version response: {s}\n", .{ i + 1, version_responses[i] });
-        
+
         // small delay between requests
         std.time.sleep(100 * std.time.ns_per_ms);
     }
-    
+
     // parse JSON responses to verify they contain the same version
     var parsed_responses: [num_clients]std.json.Parsed(std.json.Value) = undefined;
-    
+
     for (0..num_clients) |i| {
         parsed_responses[i] = try std.json.parseFromSlice(std.json.Value, std.heap.page_allocator, version_responses[i], .{});
     }
-    
+
     // verify all responses have the same version
     const first_version = parsed_responses[0].value.object.get("version").?.string;
     const first_name = parsed_responses[0].value.object.get("name").?.string;
-    
+
     for (1..num_clients) |i| {
         const current_version = parsed_responses[i].value.object.get("version").?.string;
         const current_name = parsed_responses[i].value.object.get("name").?.string;
-        
+
         try std.testing.expectEqualStrings(first_version, current_version);
         try std.testing.expectEqualStrings(first_name, current_name);
-        
+
         std.log.warn("Client {d} confirmed same version: {s}\n", .{ i + 1, current_version });
     }
-    
+
     std.log.warn("All {d} clients see the same version: {s}\n", .{ num_clients, first_version });
     std.log.warn("Version endpoint test completed successfully\n", .{});
 }
@@ -498,7 +498,7 @@ fn testVersionEndpoint(port: u16) ![]u8 {
 
 test "visitor counter increments for multiple clients" {
     std.log.warn("\n===== TESTING VISITOR COUNTER INCREMENT =====\n", .{});
-    
+
     // initialize the server
     const server = try listener.initZincServer();
 
@@ -516,26 +516,26 @@ test "visitor counter increments for multiple clients" {
     // simulate multiple clients accessing the root endpoint
     const num_visits = 3;
     var visitor_counts: [num_visits]u32 = undefined;
-    
+
     for (0..num_visits) |i| {
         const response = try testRootEndpointForVisitorCount(port);
         defer std.heap.page_allocator.free(response);
-        
+
         // extract visitor count from response
         visitor_counts[i] = try extractVisitorCount(response);
         std.log.warn("Visit {d} - Visitor count: {d}\n", .{ i + 1, visitor_counts[i] });
-        
+
         // small delay between requests
         std.time.sleep(100 * std.time.ns_per_ms);
     }
-    
+
     // verify that visitor counts are incrementing
     for (1..num_visits) |i| {
-        try std.testing.expect(visitor_counts[i] > visitor_counts[i-1]);
-        std.log.warn("Confirmed visitor count increased from {d} to {d}\n", .{ visitor_counts[i-1], visitor_counts[i] });
+        try std.testing.expect(visitor_counts[i] > visitor_counts[i - 1]);
+        std.log.warn("Confirmed visitor count increased from {d} to {d}\n", .{ visitor_counts[i - 1], visitor_counts[i] });
     }
-    
-    std.log.warn("Visitor counter test completed successfully - counts increased from {d} to {d}\n", .{ visitor_counts[0], visitor_counts[num_visits-1] });
+
+    std.log.warn("Visitor counter test completed successfully - counts increased from {d} to {d}\n", .{ visitor_counts[0], visitor_counts[num_visits - 1] });
 }
 
 // helper function to test the root endpoint for visitor count
@@ -573,19 +573,46 @@ fn testRootEndpointForVisitorCount(port: u16) ![]u8 {
 fn extractVisitorCount(response: []const u8) !u32 {
     // response format: "Scaffold Listener is running - Visitors: 123"
     const visitors_prefix = "Visitors: ";
-    
+
     if (std.mem.indexOf(u8, response, visitors_prefix)) |start_index| {
         const number_start = start_index + visitors_prefix.len;
-        
+
         // find the end of the number (either end of string or next whitespace)
         var number_end = number_start;
         while (number_end < response.len and std.ascii.isDigit(response[number_end])) {
             number_end += 1;
         }
-        
+
         const number_str = response[number_start..number_end];
         return try std.fmt.parseInt(u32, number_str, 10);
     }
-    
+
     return error.VisitorCountNotFound;
+}
+
+test "dynamic port assignment works" {
+    std.log.warn("\n===== TESTING DYNAMIC PORT ASSIGNMENT =====\n", .{});
+
+    // initialize the server
+    const server = try listener.initZincServer();
+    defer listener.shutdownServer(server) catch {};
+
+    // test 1: assign port to user "alice"
+    const port1 = try listener.Port.forUser("alice");
+    std.log.warn("Alice assigned port: {d}\n", .{port1.number});
+
+    // test 2: assign port to user "bob" (should be different)
+    const port2 = try listener.Port.forUser("bob");
+    std.log.warn("Bob assigned port: {d}\n", .{port2.number});
+
+    // test 3: request same user again (should get same port)
+    const port1_again = try listener.Port.forUser("alice");
+    std.log.warn("Alice reconnected to port: {d}\n", .{port1_again.number});
+
+    // verify expectations
+    try std.testing.expect(port1.number != port2.number); // different users, different ports
+    try std.testing.expect(port1.number == port1_again.number); // same user, same port
+    try std.testing.expect(port1.number >= 1025 and port1.number <= 65535); // valid range
+
+    std.log.warn("Dynamic port assignment test passed!\n", .{});
 }
