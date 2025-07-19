@@ -110,8 +110,15 @@ pub const Task = struct {
 
     pub fn addEnv(self: *Task, env_var: []const u8) !void {
         const new_env = if (self.env) |existing| blk: {
-            const res = try self.allocator.realloc(existing, existing.len + 1);
+            // create a new slice with one more element
+            const res = try self.allocator.alloc([]const u8, existing.len + 1);
+            for (existing, 0..) |env, i| {
+                res[i] = env;
+            }
+            // add the new element
             res[existing.len] = try self.allocator.dupe(u8, env_var);
+            // free the old slice
+            self.allocator.free(existing);
             break :blk res;
         } else blk: {
             const res = try self.allocator.alloc([]const u8, 1);
