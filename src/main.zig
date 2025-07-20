@@ -1,5 +1,6 @@
 const std = @import("std");
 const listener = @import("listener/listener.zig");
+const spec = @import("devcontainer/devcontainer.zig");
 const task = @import("task/task.zig");
 const worker = @import("worker/worker.zig");
 const zinc = @import("zinc");
@@ -10,10 +11,55 @@ var worker_instance: ?*worker.Worker = null;
 var allocator: std.mem.Allocator = undefined;
 var next_port: u16 = 3001;
 
+fn readConfig(alloc: std.mem.Allocator, path: []const u8) !std.json.Parsed(spec.DevContainer) {
+    // Read the file
+    const file = try std.fs.cwd().openFile(path, .{});
+    defer file.close();
+    const size = (try file.stat()).size;
+    const data = try std.fs.cwd().readFileAlloc(alloc, path, size);
+    defer allocator.free(data);
+ 
+    // Set up diagnostics for helpful error output
+    var diag = std.json.Diagnostics{};
+
+    // Parse the file
+    var stream = std.json.Scanner.initCompleteInput(allocator, data);
+    stream.enableDiagnostics(&diag);
+    defer stream.deinit();
+    const json = std.json.parseFromTokenSource(
+        spec.DevContainer,
+        allocator,
+        &stream,
+        .{
+            .allocate = .alloc_always, .ignore_unknown_fields = true
+        }
+    ) catch |err| {
+        // Catch JSON parsing errors and report location of parse issue
+        std.log.err(
+            "JSON parsed failed: {}, line {}:{}",
+            .{ err, diag.getLine(), diag.getColumn() }
+        );
+        return err;
+    };
+    return json;
+}
+
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
+    defer {
+        const leak = gpa.deinit();
+        if (leak != std.heap.Check.ok) @panic("LEAK!");
+    }
     allocator = gpa.allocator();
+
+    // Load devcontainer.json file; this should be required
+    // for every application we launch
+
+    // According to the spec, the file has to exist at this location
+    // with this name
+
+    const config = try readConfig(allocator, ".devcontainer/devcontainer.json");
+    defer config.deinit();
 
     // initialize session storage
     session_map = std.StringHashMap(u16).init(allocator);
@@ -129,7 +175,7 @@ fn createUserContainer(user_id: []const u8, port: u16) !void {
 
     // create task for container - use a simple image that will run
     const container_task = try task.Task.init(allocator, "user-container");
-    try container_task.setImage("hello-world");
+    try container_task.setImage("theia:latest");
 
     // set port environment variable (though hello-world won't use it)
     const port_env = try std.fmt.allocPrint(allocator, "PORT={d}", .{port});
