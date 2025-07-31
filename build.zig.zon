@@ -54,7 +54,7 @@
         },
         .okredis = .{
             .url = "https://github.com/kristoff-it/zig-okredis/archive/refs/heads/master.zip",
-            .hash = "okredis-0.0.0-Cg726qkaBACbJ6pLJ-nOYxjO40hoGdlto52a7BvAsbwV",
+            .hash = "okredis-0.1.0-Cg726vcEBAAjrhwgBJ2cjL4qN3ircjBsX6iTd7wEFiEC",
         },
     },
     .paths = .{
