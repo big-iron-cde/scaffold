@@ -23,7 +23,7 @@ pub const PortAttributes = struct {
 pub const BuildConfig = struct {
     dockerfile: ?string = null,
     context: ?string = null,
-    args: ?std.StringHashMap(string) = null,
+    args: ?std.json.Value = null,
     options: ?[]string = null,
     target: ?string = null,
     cacheFrom: ?[]string = null,
@@ -44,7 +44,7 @@ pub const HostRequirements = struct {
     } = null,
 };
 
-// mount configuration
+containerEnv: ?std.json.Value = null,
 pub const Mount = struct {
     source: string,
     target: string,
@@ -56,16 +56,16 @@ pub const Mount = struct {
 pub const LifecycleCommand = union(enum) {
     string: string,
     array: []string,
-    object: std.StringHashMap(string),
+    object: std.json.Value,
 };
 
 pub const DevContainer = struct {
-    name: ?string = null,
-    image: ?string = null,
+    name: ?std.json.Value = null,
+    image: ?std.json.Value = null,
     build: ?BuildConfig = null,
     forwardPorts: ?[]string = null,
-    portsAttributes: ?std.StringHashMap(PortAttributes) = null,
-    otherPortsAttributes: ?PortAttributes = null,
+    portsAttributes: ?std.json.Value = null,
+    otherPortsAttributes: ?std.json.Value = null,
     appPort: ?union(enum) {
         single: i32,
         multiple: []i32,
@@ -73,8 +73,8 @@ pub const DevContainer = struct {
     } = null,
 
     // env variables
-    containerEnv: ?std.StringHashMap(string) = null,
-    remoteEnv: ?std.StringHashMap(string) = null,
+    containerEnv: ?std.json.Value = null,
+    remoteEnv: ?std.json.Value = null,
 
     // user configuration
     remoteUser: ?string = null,
@@ -105,9 +105,9 @@ pub const DevContainer = struct {
     runServices: ?[]string = null,
 
     // features and customizations
-    features: ?std.StringHashMap(std.json.Value) = null,
+    features: ?std.json.Value = null,
     overrideFeatureInstallOrder: ?[]string = null,
-    customizations: ?std.StringHashMap(std.json.Value) = null,
+    customizations: ?std.json.Value = null,
 
     // lifecycle scripts
     initializeCommand: ?LifecycleCommand = null,
@@ -121,3 +121,27 @@ pub const DevContainer = struct {
     // host requirements
     hostRequirements: ?HostRequirements = null,
 };
+
+// parse a devcontainer.json file
+pub fn parseFromFile(allocator: std.mem.Allocator, file_path: []const u8) !DevContainer {
+    const file = try std.fs.cwd().openFile(file_path, .{});
+    defer file.close();
+
+    const file_size = try file.getEndPos();
+    const content = try allocator.alloc(u8, file_size);
+    defer allocator.free(content);
+
+    _ = try file.readAll(content);
+
+    return parseFromJson(allocator, content);
+}
+
+// parse JSON content into DevContainer struct
+pub fn parseFromJson(allocator: std.mem.Allocator, json_content: []const u8) !DevContainer {
+    const parsed = try std.json.parseFromSlice(DevContainer, allocator, json_content, .{
+        .ignore_unknown_fields = true,
+    });
+    defer parsed.deinit();
+
+    return parsed.value;
+}
