@@ -46,6 +46,6 @@ pub const RedisStore = struct {
         if (reply.*.type != c.REDIS_REPLY_STRING) return null;
 
         const str = reply.*.str[0..reply.*.len];
-        return try allocator.dupe(u8, str); // ← FIXED HERE
+        return try allocator.dupe(u8, str);
     }
 };
