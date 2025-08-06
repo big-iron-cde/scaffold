@@ -1,5 +1,6 @@
 pub fn main() !void {
     var server = try listener.initZincServer();
+
     try server.run();
 }
 

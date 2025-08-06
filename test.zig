@@ -18,11 +18,12 @@ test "save and get task from Redis" {
     const value = "This is a test task";
 
     try store.saveTask(key, value);
+
     const result = try store.getTask(key, allocator);
+    defer allocator.free(result.?); // moved up to ensure clean memory handling
+
     try std.testing.expect(result != null);
     try std.testing.expect(std.mem.eql(u8, result.?, value));
-
-    defer allocator.free(result.?);
 }
 
 test "create worker" {

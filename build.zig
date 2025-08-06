@@ -2,26 +2,21 @@ const std = @import("std");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
-
     const optimize = b.standardOptimizeOption(.{});
 
-    // create the main executable
-    const exe = b.addExecutable(.{ .name = "scaffold", .root_source_file = b.path("src/main.zig"), .target = target, .optimize = optimize });
+    // Main executable
+    const exe = b.addExecutable(.{
+        .name = "scaffold",
+        .root_source_file = b.path("src/main.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
 
     const uuid = b.dependency("uuid", .{ .target = target, .optimize = optimize });
     const docker = b.dependency("docker", .{ .target = target, .optimize = optimize });
-    const zinc = b.dependency("zinc", .{
-        .target = target,
-        .optimize = optimize,
-    });
+    const zinc = b.dependency("zinc", .{ .target = target, .optimize = optimize });
 
-    const redis = b.dependency("okredis", .{
-        .target = target,
-        .optimize = optimize,
-    });
-
-    b.installArtifact(exe);
-
+    // Add imports and link dependencies
     exe.root_module.addImport("uuid", uuid.module("uuid"));
     exe.linkLibrary(uuid.artifact("uuid"));
 
@@ -30,12 +25,13 @@ pub fn build(b: *std.Build) void {
 
     exe.root_module.addImport("zinc", zinc.module("zinc"));
 
+    // Link hiredis C library
+    exe.linkSystemLibrary("hiredis");
 
-    exe.root_module.addImport("redis", redis.module("okredis"));
+    b.installArtifact(exe);
 
-    // setup run command
+    // Run step
     const run_cmd = b.addRunArtifact(exe);
-
     run_cmd.step.dependOn(b.getInstallStep());
 
     if (b.args) |args| {
@@ -45,7 +41,7 @@ pub fn build(b: *std.Build) void {
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
 
-    // THIS IS THE KEY PART - create a separate test that uses test.zig directly
+    // Unit tests
     const unit_tests = b.addTest(.{
         .root_source_file = b.path("test.zig"),
         .target = target,
@@ -55,11 +51,10 @@ pub fn build(b: *std.Build) void {
     unit_tests.root_module.addImport("uuid", uuid.module("uuid"));
     unit_tests.root_module.addImport("docker", docker.module("docker"));
     unit_tests.root_module.addImport("zinc", zinc.module("zinc"));
+    unit_tests.linkSystemLibrary("hiredis");
 
-    unit_tests.root_module.addImport("redis", redis.module("okredis"));
-
-    // install and run the tests
     b.installArtifact(unit_tests);
+
     const run_unit_tests = b.addRunArtifact(unit_tests);
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_unit_tests.step);
