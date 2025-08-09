@@ -48,6 +48,14 @@
             .url = "https://github.com/zon-dev/zinc/archive/refs/heads/main.zip",
             .hash = "zinc-0.1.0-beta.5-uL00zYKeAQCy-ZN_xrjLGNltmyPLb3xD9R_HYHAMTITQ",
         },
+        .zinc = .{
+            .url = "https://github.com/zon-dev/zinc/archive/refs/heads/main.zip",
+            .hash = "zinc-0.1.0-beta.5-uL00zYKeAQCy-ZN_xrjLGNltmyPLb3xD9R_HYHAMTITQ",
+        },
+        .okredis = .{
+            .url = "https://github.com/kristoff-it/zig-okredis/archive/refs/heads/master.zip",
+            .hash = "okredis-0.1.0-Cg726vcEBAAjrhwgBJ2cjL4qN3ircjBsX6iTd7wEFiEC",
+        },
     },
     .paths = .{
         "build.zig",

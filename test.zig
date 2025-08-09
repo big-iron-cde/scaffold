@@ -5,6 +5,28 @@ const worker = @import("src/worker/worker.zig");
 const task = @import("src/task/task.zig");
 const scheduler = @import("src/scheduler/scheduler.zig");
 const listener = @import("src/listener/listener.zig");
+const RedisStore = @import("src/store/store.zig").RedisStore;
+
+test "save and get task from Redis" {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();            // ✅ make sure we deinit the GPA
+    const allocator = gpa.allocator();
+
+    var store = try RedisStore.init("127.0.0.1", 6379);
+    defer store.deinit();
+
+    const key = "task:test:123";
+    const value = "This is a test task";
+
+    // binary-safe set/get
+    try store.setRaw(key, value);
+
+    const result = try store.getRaw(allocator, key);
+    try std.testing.expect(result != null);
+    defer allocator.free(result.?);
+    try std.testing.expect(std.mem.eql(u8, result.?, value));
+
+}
 
 test "create worker" {
     std.log.warn("\n===== TESTING CREATE WORKER =====\n", .{});
